@@ -1,6 +1,5 @@
 import os
 import json
-import torch
 from torchvision.io import read_video
 from torch.utils.data import Dataset
 
@@ -9,6 +8,7 @@ class VideoDataset(Dataset):
         self.data_dir = data_dir
         self.transform = transform
 
+        # Load video paths and labels from JSON file
         with open(json_file, 'r') as file:
             data = json.load(file)
 
@@ -36,16 +36,16 @@ class VideoDataset(Dataset):
         return frames, label
 
 # Example usage:
-data_dir = 'allVids' #replace with video samples path
-json_file = 'all_labels.json' #replace with labels path
-transform = None  
+# data_dir = 'allVids'
+# json_file = 'labels/all_labels.json'
+# transform = None  # You can add your own preprocessing transformations here
 
-video_dataset = VideoDataset(data_dir, json_file, transform=transform)
+# video_dataset = VideoDataset(data_dir, json_file, transform=transform)
 
-# Accessing a specific sample
-sample_index = 0
-sample_frames, sample_label = video_dataset[sample_index]
+# # Accessing a specific sample
+# sample_index = 0
+# sample_frames, sample_label = video_dataset[sample_index]
 
-# Print the shapes for demonstration
-print(f"Video Frames Shape: {sample_frames.shape}")
-print(f"Label: {sample_label}")
+# # Print the shapes for demonstration
+# print(f"Video Frames Shape: {sample_frames.shape}")
+# print(f"Label: {sample_label}")

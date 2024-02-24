@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 from collections import defaultdict
 import dataLoader as myData
+from torchvision.models.video import r3d_18
 
 class VideoClassificationModel(nn.Module):
     def __init__(self, num_classes):
@@ -46,6 +47,23 @@ class VideoClassificationModel(nn.Module):
         
         return x
 
+class C3DVideoClassificationModel(nn.Module):
+    def __init__(self, num_classes):
+        super(C3DVideoClassificationModel, self).__init__()
+
+        self.c3d = r3d_18(pretrained=True)
+        in_features = self.c3d.fc.in_features
+        self.c3d.fc = nn.Linear(in_features, num_classes)
+    
+
+    def forward(self, x):
+        x = x.permute(0, 2, 1, 3, 4)
+        x = self.c3d(x)
+
+        return x
+
+
+        
 # Example usage:
 num_classes = 2  # Replace with the actual number of classes
 model = VideoClassificationModel(num_classes)
