@@ -1,10 +1,10 @@
 import os
 import json
-import numpy as np
 from torchvision.io import read_video
 from torch.utils.data import DataLoader
 from torchvision.transforms import functional as F
 import torch
+import cv2
 
 class VideoDataset(DataLoader):
     def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames = 300):
@@ -36,6 +36,25 @@ class VideoDataset(DataLoader):
             frames = frames[:self.num_frames]
         
         return frames
+    
+    def load_video_frames(self, video_path):
+        cap = cv2.VideoCapture(video_path)
+        frames = []
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            if self.target_size:
+                frame = cv2.resize(frame, self.target_size[::-1])
+            
+            frame = F.to_tensor(frame)
+            frames.append(frame)
+            
+        cap.release()
+        frames = torch.stack(frames)
+        return frames
 
     def __getitem__(self, index):
         video_id = self.video_ids[index]
@@ -43,9 +62,7 @@ class VideoDataset(DataLoader):
 
         # Load video frames using OpenCV
         video_path = os.path.join(self.data_dir, f'{video_id}.mp4')
-        video, audio, info = read_video(video_path, pts_unit="sec")
-        
-        frames = video.permute(0, 3, 1, 2)
+        frames = self.load_video_frames(video_path)
 
         # Apply transformations if provided
         if self.transform:
@@ -67,7 +84,7 @@ sample_index = 0
 sample_frames, sample_label = video_dataset[sample_index]
 
 # Print the shapes for demonstration
-batch_size = 32
+batch_size = 4
 data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 
 # Iterate through the DataLoader
