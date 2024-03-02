@@ -1,69 +1,60 @@
+import torch.nn as nn
+import torch.nn.functional as F
 import torch
-from torch.nn import functional as F
-import argparse
-from torch import nn, optim
-from torch.optim.optimizer import Optimizer
-from torch.utils.tensorboard import SummaryWriter
-import time
-from typing import Union, NamedTuple
-import os
-from pathlib import Path
-from torch.utils.data import DataLoader
-import numpy as np
-from collections import defaultdict
-import dataLoader as myData
-from torchvision.models.video import r3d_18
 
-class VideoClassificationModel(nn.Module):
-    def __init__(self, num_classes):
-        super(VideoClassificationModel, self).__init__()
-        
-        # 3D Convolutional Layers
-        self.conv1 = nn.Conv3d(3, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.relu1 = nn.ReLU()
-        self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+class CNN3D(nn.modules):
+    def __init__(self, t_dim=120, img_x=90, img_y=120, drop_p=0.2, fc1_hidden=256, fc2_hidden=256, num_classes=2):
+        super(CNN3D, self).__init__()
 
-        self.conv2 = nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.relu2 = nn.ReLU()
-        self.pool2 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+        self.t_dim = t_dim
+        self.img_x = img_x
+        self.img_y = img_y
+        self.drop_p = drop_p
+        self.fc1_hidden = fc1_hidden
+        self.fc2_hidden = fc2_hidden
+        self.num_classes = num_classes
+        self.ch1, self.ch2 = 32, 48
+        self.kernel1, self.kernel2 = (5,5,5), (3, 3, 3)
+        self.stride1, self.stride2 = (2, 2, 2), (2, 2, 2)
+        self.padd1, self.padd2 = (0, 0, 0), (0, 0, 0)
 
-        # Fully Connected Layers
-        self.fc1 = nn.Linear(128 * 16 * 16, 512)
-        self.relu3 = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)
+        self.conv1_out = self.conv3D_output_size((self.t_dim, self.img_x, self.img_y), self.padd1, self.kernel1, self.stride1)
+        self.conv2_out = self.conv3D_output_size(self.conv1_out, self.padd2, self.kernel2, self.stride2)
 
-        self.fc2 = nn.Linear(512, num_classes)
+        self.conv1 = nn.Conv3d(in_channels=3, out_channels=self.ch1, kernel_size=self.kernel1, stride=self.stride1, padding=self.padd1)
+        self.bn1 = nn.BatchNorm3d(self.ch1)
 
-    def forward(self, x):
-        # Input: (batch_size, channels, frames, height, width)
-        x = self.pool1(self.relu1(self.conv1(x)))
-        x = self.pool2(self.relu2(self.conv2(x)))
-        
-        # Reshape before fully connected layers
-        x = x.view(x.size(0), -1)
-        
-        x = self.dropout(self.relu3(self.fc1(x)))
-        x = self.fc2(x)
-        
-        return x
-
-class C3DVideoClassificationModel(nn.Module):
-    def __init__(self, num_classes):
-        super(C3DVideoClassificationModel, self).__init__()
-
-        self.c3d = r3d_18(pretrained=True)
-        in_features = self.c3d.fc.in_features
-        self.c3d.fc = nn.Linear(in_features, num_classes)
+        self.conv2 = nn.Conv3d(in_channels=self.ch1, out_channels=self.ch2, kernel_size=self.kernel2, stride=self.stride2, padding=self.padd2)
+        self.bn2 = nn.BatchNorm3d(self.ch2)
+        self.relu = nn.ReLU(inplace=True)
+        self.drop = nn.Dropout3d(self.drop_p)
+        self.pool = nn.MaxPool3d(2)
+        self.fc1 = nn.Linear(self.ch2 * self.conv2_out[0] * self.conv2_out[1] * self.conv2_out[2], self.fc1_hidden)
+        self.fc2 = nn.Linear(self.fc1_hidden, self.fc2_hidden)
+        self.fc3 = nn.Linear(self.fc2_hidden, 1)
     
-
     def forward(self, x):
-        x = x.permute(0, 2, 1, 3, 4)
-        x = self.c3d(x)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.drop(x)
+
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+        x = self.drop(x)
+
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.dropout(x, p=self.drop_p, training=self.training)
+        x = torch.sigmoid(self.fc3(x))
 
         return x
 
 
-        
-# Example usage:
-num_classes = 2  # Replace with the actual number of classes
-model = VideoClassificationModel(num_classes)
+    def conv3D_output_size(input_size, padding, kernel_size, stride):
+        output_size = [(input_size[0] + 2 * padding[0] - (kernel_size[0] - 1) - 1) // stride[0] + 1,
+                       (input_size[1] + 2 * padding[1] - (kernel_size[1] - 1) - 1) // stride[1] + 1,
+                       (input_size[2] + 2 * padding[2] - (kernel_size[2] - 1) - 1) // stride[2] + 1]
+        return output_size
