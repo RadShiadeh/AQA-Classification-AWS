@@ -21,7 +21,7 @@ test_labels = "../../dissData/test_labels/test_data.json"
 valid_labels = "../../dissData/valid_labels/valid_data.json"
 
 def main():
-    batch_size = 4
+    batch_size = 128
     learning_rate = 0.0001
     epochs = 50
 
