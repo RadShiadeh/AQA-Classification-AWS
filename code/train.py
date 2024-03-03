@@ -46,6 +46,7 @@ def main():
         total_loss = 0.0
 
         for inputs, labels in train_loader:
+            sys.exit(0)
             inputs, labels = inputs.to(device), labels.float().to(device)
 
             outputs = classifier(inputs)
@@ -56,9 +57,6 @@ def main():
             optimiser.step()
 
             total_loss += loss.item()
-        
-        if epoch == 1:
-            sys.exit(1)
         
         print(f"Epoch {epoch + 1}/{epochs}, Loss: {total_loss /len(train_loader)}")
 

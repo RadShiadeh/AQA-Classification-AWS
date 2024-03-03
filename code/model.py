@@ -21,7 +21,7 @@ class CNN3D(nn.Module):
         self.conv1_out = self.conv3D_output_size((self.t_dim, self.img_x, self.img_y), self.padd1, self.kernel1, self.stride1)
         self.conv2_out = self.conv3D_output_size(self.conv1_out, self.padd2, self.kernel2, self.stride2)
 
-        self.conv1 = nn.Conv3d(in_channels=3, out_channels=self.ch1, kernel_size=self.kernel1, stride=self.stride1, padding=self.padd1)
+        self.conv1 = nn.Conv3d(in_channels=300, out_channels=self.ch1, kernel_size=self.kernel1, stride=self.stride1, padding=self.padd1)
         self.bn1 = nn.BatchNorm3d(self.ch1)
 
         self.conv2 = nn.Conv3d(in_channels=self.ch1, out_channels=self.ch2, kernel_size=self.kernel2, stride=self.stride2, padding=self.padd2)
