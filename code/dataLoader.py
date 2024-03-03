@@ -1,6 +1,5 @@
 import os
 import json
-from torchvision.io import read_video
 from torch.utils.data import DataLoader
 from torchvision.transforms import functional as F
 import torch
