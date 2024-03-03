@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-class CNN3D(nn.modules):
+class CNN3D(nn.Module):
     def __init__(self, t_dim=120, img_x=90, img_y=120, drop_p=0.2, fc1_hidden=256, fc2_hidden=256, num_classes=2):
         super(CNN3D, self).__init__()
 
@@ -33,6 +33,7 @@ class CNN3D(nn.modules):
         self.fc2 = nn.Linear(self.fc1_hidden, self.fc2_hidden)
         self.fc3 = nn.Linear(self.fc2_hidden, 1)
     
+    
     def forward(self, x):
         x = self.conv1(x)
         x = self.bn1(x)
@@ -52,7 +53,8 @@ class CNN3D(nn.modules):
 
         return x
 
-
+    
+    @staticmethod
     def conv3D_output_size(input_size, padding, kernel_size, stride):
         output_size = [(input_size[0] + 2 * padding[0] - (kernel_size[0] - 1) - 1) // stride[0] + 1,
                        (input_size[1] + 2 * padding[1] - (kernel_size[1] - 1) - 1) // stride[1] + 1,

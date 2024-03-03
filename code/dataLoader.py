@@ -23,7 +23,11 @@ class VideoDataset(DataLoader):
         return len(self.video_ids)
     
     def resize_frame(self, frame):
-        return F.resize(frame, self.target_size)
+        frame_PIL = F.to_pil_image(frame)
+        resised_frame = F.resize(frame_PIL, self.target_size)
+        resised_frame = F.to_tensor(resised_frame)
+
+        return resised_frame
     
     def pad_or_trim_frames(self, frames):
         num_frames = frames.shape[0]
@@ -79,20 +83,20 @@ sample_vids = "../../dissData/allVids"
 video_dataset = VideoDataset(sample_vids, labels_path, transform=None)
 
 # Accessing a specific sample
-sample_index = 0
-sample_frames, sample_label = video_dataset[sample_index]
+# sample_index = 0
+# sample_frames, sample_label = video_dataset[sample_index]
 
-# Print the shapes for demonstration
-batch_size = 4
-data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
+# # Print the shapes for demonstration
+# batch_size = 4
+# data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 
-# Iterate through the DataLoader
-for batch_frames, batch_labels in data_loader:
-    # Print information about the batch
-    print(f"Batch Frames Shape: {batch_frames.shape}")
-    print(f"Batch Labels: {batch_labels}")
+# # Iterate through the DataLoader
+# for batch_frames, batch_labels in data_loader:
+#     # Print information about the batch
+#     print(f"Batch Frames Shape: {batch_frames.shape}")
+#     print(f"Batch Labels: {batch_labels}")
 
-    # Access individual samples within the batch
-    for frames, label in zip(batch_frames, batch_labels):
-        print(f"Sample Frames Shape: {frames.shape}")
-        print(f"Sample Label: {label}")
+#     # Access individual samples within the batch
+#     for frames, label in zip(batch_frames, batch_labels):
+#         print(f"Sample Frames Shape: {frames.shape}")
+#         print(f"Sample Label: {label}")
