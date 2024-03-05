@@ -15,13 +15,22 @@ for ids, labels in file.items():
     if labels == []:
         perfect[ids] = 10
     else:
-        for d in durations.values():
-            tmp_dur = durations[ids]
-            print(d)
-            print(tmp_dur)
+        for l in labels:
+            tmp_error_dur = l[1] - l[0]
+            total_durr = durations[ids]
+            score = ((total_durr - tmp_error_dur) * 10) / total_durr
+            perfect[ids] = round(score, 1)
 
 
 
-# out = "./labels/OHP_Aqa.json"
-# with open(out, 'w') as f:
-#     json.dump(perfect, f, indent=4)
+out = "./labels/OHP_Aqa.json"
+with open(out, 'w') as f:
+    json.dump(perfect, f, indent=4)
+
+# Read the error data from the file error_knees.json.
+# Read the video durations data from the file video_durations.json.
+# Iterate through each video ID in the error data.
+# If there are no errors (empty list), assign a perfect score of 10.
+# If there are errors, calculate the error duration, total video duration, and score based on the formula provided. Round the score to one decimal place.
+# Store the calculated score for each video ID in the perfect dictionary.
+# Write the perfect dictionary to a new JSON file named OHP_Aqa.json with proper indentation
