@@ -4,7 +4,9 @@ import json
 
 def get_vid_length(path):
     clip = VideoFileClip(path)
-    return clip.duration
+    duration = clip.duration
+    clip.close()
+    return duration
 
 def create_data(data_dir, out):
     durations = {}
@@ -20,7 +22,7 @@ def create_data(data_dir, out):
 
 
 
-dir = "../dissData/allVids"
-out_path = "./labels/video_durations.json"
+dir = "../../dissData/allVids"
+out_path = "../labels/video_durations.json"
 
 create_data(dir, out_path)
