@@ -1,5 +1,3 @@
-import os
-import json
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -46,7 +44,6 @@ def main():
         total_loss = 0.0
 
         for inputs, labels in train_loader:
-            sys.exit(0)
             inputs, labels = inputs.to(device), labels.float().to(device)
 
             outputs = classifier(inputs)
@@ -78,3 +75,30 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Data Loading:
+
+# It defines paths for video data (all_vids), labels (all_labels), and separate paths for training, testing, and validation datasets.
+# Creates instances of VideoDataset for each dataset (train_dataset, test_dataset, valid_dataset).
+# DataLoader Creation:
+
+# Uses PyTorch's DataLoader to create data loaders for training, testing, and validation datasets (train_loader, test_loader, valid_loader).
+# Model Initialization:
+
+# Instantiates a 3D CNN model (classifier) using the CNN3D class.
+# Device Configuration:
+
+# Determines whether to use GPU (cuda) or CPU (cpu) and moves the model to the selected device.
+# Loss Function and Optimizer:
+
+# Specifies the binary cross-entropy loss (BCELoss) as the loss function.
+# Uses AdamW as the optimizer.
+# Training Loop:
+
+# Iterates through each epoch.
+# Sets the model to training mode (classifier.train()).
+# Iterates through batches in the training dataset, computes loss, and performs backpropagation.
+# Prints the average loss for the epoch.
+# Sets the model to evaluation mode (classifier.eval()).
+# Evaluates the model on the validation dataset and prints the validation accuracy.
