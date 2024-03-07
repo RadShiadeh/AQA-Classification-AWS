@@ -104,6 +104,25 @@ class FeatureExtractionRes3D(nn.Module):
         x = x.view(x.size(0), -1)
 
         return x
+    
+
+#sample final look of endto end not sure if iys right
+class EndToEndModel(nn.Module):
+    def __init__(self, classifier, final_score_regressor):
+        super(EndToEndModel, self).__init__()
+        self.classifier = classifier
+        self.final_score_regressor = final_score_regressor
+
+    def forward(self, x):
+        classification_output = self.classifier(x)
+
+        # Final Score Regression
+        final_score = self.final_score_regressor(x)
+
+        return {
+            'classification': classification_output,
+            'final_score': final_score
+        }
 
 # Class Definition CNN3D:
 # CNN3D is a subclass of nn.Module, which is the base class for all neural network modules in PyTorch.
