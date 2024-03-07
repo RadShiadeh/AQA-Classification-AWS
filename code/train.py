@@ -5,7 +5,6 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import functional as F
 from dataLoader import VideoDataset
 from model import CNN3D
-import sys
 
 
 # paths
@@ -65,7 +64,7 @@ def main():
             for inputs, labels in valid_loader:
                 inputs, labels = inputs.to(device), labels.float().to(device)
                 out = classifier(inputs)
-                pred = (outputs > 0.5).float()
+                pred = (out > 0.5).float()
 
                 total += labels.size(0)
                 correct += (pred == labels.unsqueeze(1)).sum().item()

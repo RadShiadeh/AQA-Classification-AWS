@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import torchvision.models as models
+
 
 class CNN3D(nn.Module):
     def __init__(self, t_dim=120, img_x=90, img_y=120, drop_p=0.2, fc1_hidden=256, fc2_hidden=256, num_classes=2):
@@ -62,9 +64,9 @@ class CNN3D(nn.Module):
         return output_size
 
 
-class ScoreRegressorOHP(nn.Module):
+class ScoreRegressor(nn.Module):
     def __init__(self, input_size, hidden_size, out_size):
-        super(ScoreRegressorOHP, self).__init__()
+        super(ScoreRegressor, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden_size)
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(hidden_size, out_size)
@@ -76,8 +78,34 @@ class ScoreRegressorOHP(nn.Module):
 
         return x
 
-# Class Definition:
+class FeatureExtractionC3D(nn.Module):
+    def __init__(self, num_classes=101):
+        c3d_model = models.video.r3d_18(pretrained=True)
+        self.features = nn.Sequential(*list(c3d_model.children())[:-1])
+        self.avgpool = nn.AdaptiveAvgPool3d(1)
+    
+    def forward(self, x):
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
 
+        return x
+
+class FeatureExtractionRes3D(nn.Module):
+    def __init__(self, num_classes = 400):
+        super(FeatureExtractionRes3D, self).__init__()
+        res3d_model = models.video.r3d_18()
+        self.features = nn.Sequential(*list(res3d_model.children())[::-1])
+        self.avgpool1 = nn.AdaptiveAvgPool3d(1)
+    
+    def forward(self, x):
+        x = self.features(x)
+        x = self.avgpool1(x)
+        x = x.view(x.size(0), -1)
+
+        return x
+
+# Class Definition CNN3D:
 # CNN3D is a subclass of nn.Module, which is the base class for all neural network modules in PyTorch.
 # Initialization:
 
