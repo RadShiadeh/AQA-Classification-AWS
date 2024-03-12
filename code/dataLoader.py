@@ -3,10 +3,10 @@ import json
 from torch.utils.data import DataLoader
 from torchvision.transforms import functional as F
 import torch
-from torchvision.io import read_video
+import cv2
 
 class VideoDataset(DataLoader):
-    def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames=100):
+    def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames = 100):
         self.data_dir = data_dir
         self.transform = transform
         self.target_size = target_size
@@ -21,14 +21,14 @@ class VideoDataset(DataLoader):
 
     def __len__(self):
         return len(self.video_ids)
-
+    
     def resize_frame(self, frame):
         frame_PIL = F.to_pil_image(frame)
-        resized_frame = F.resize(frame_PIL, self.target_size)
-        resized_frame = F.to_tensor(resized_frame)
+        resised_frame = F.resize(frame_PIL, self.target_size)
+        resised_frame = F.to_tensor(resised_frame)
 
-        return resized_frame
-
+        return resised_frame
+    
     def pad_or_trim_frames(self, frames):
         num_frames = frames.shape[0]
 
@@ -37,27 +37,40 @@ class VideoDataset(DataLoader):
             frames = torch.cat([frames, padding])
         elif num_frames > self.num_frames:
             frames = frames[:self.num_frames]
-
+        
         return frames
-
+    
     def load_video_frames(self, video_path):
-        video, audio, info = read_video(video_path, pts_unit='sec')
-        frames = video.permute(0, 3, 1, 2)  # Change the channel position
-        frames = F.resize(frames, self.target_size[::-1]) if self.target_size else frames
+        cap = cv2.VideoCapture(video_path)
+        frames = []
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            if self.target_size:
+                frame = cv2.resize(frame, self.target_size[::-1])
+            
+            frame = F.to_tensor(frame)
+            frames.append(frame)
+            
+        cap.release()
+        frames = torch.stack(frames)
         return frames
 
     def __getitem__(self, index):
         video_id = self.video_ids[index]
         label = self.labels[index]
 
-        # Load video frames using torchvision
+        # Load video frames using OpenCV
         video_path = os.path.join(self.data_dir, f'{video_id}.mp4')
         frames = self.load_video_frames(video_path)
 
         # Apply transformations if provided
         if self.transform:
             frames = [self.transform(frame) for frame in frames]
-
+        
         frames = [self.resize_frame(frame) for frame in frames]
         frames = torch.stack(frames)
         frames = self.pad_or_trim_frames(frames)
