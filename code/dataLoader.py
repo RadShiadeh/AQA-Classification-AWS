@@ -6,7 +6,7 @@ import torch
 import cv2
 
 class VideoDataset(DataLoader):
-    def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames = 300):
+    def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames = 100):
         self.data_dir = data_dir
         self.transform = transform
         self.target_size = target_size
@@ -77,10 +77,12 @@ class VideoDataset(DataLoader):
 
         return frames, label
 
-labels_path = "../../dissData/labels/all_labels.json"
-sample_vids = "../../dissData/allVids"
+# -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    
+# labels_path = "../../dissData/labels/all_labels.json"
+# sample_vids = "../../dissData/allVids"
 
-video_dataset = VideoDataset(sample_vids, labels_path, transform=None)
+# video_dataset = VideoDataset(sample_vids, labels_path, transform=None)
 
 # Accessing a specific sample
 # sample_index = 0

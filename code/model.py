@@ -5,7 +5,7 @@ import torchvision.models as models
 
 
 class CNN3D(nn.Module):
-    def __init__(self, t_dim=300, img_x=480, img_y=480, fc_hidden=256, num_classes=2):
+    def __init__(self, t_dim=100, img_x=480, img_y=480, fc_hidden=256, num_classes=2):
         super(CNN3D, self).__init__()
 
         self.t_dim = t_dim
@@ -45,7 +45,6 @@ class CNN3D(nn.Module):
         x = torch.sigmoid(F.relu(self.fc2(x)))
 
         return x
-
     
     @staticmethod
     def conv3D_output_size(input_size, padding, kernel_size, stride):
@@ -57,19 +56,71 @@ class CNN3D(nn.Module):
         return output_size
 
 
+class C3DC(nn.Module):
+    def __init__(self):
+        super(C3DC, self).__init__()
+
+        self.conv1 = nn.Conv3d(3, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+
+        self.conv2 = nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool2 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv3a = nn.Conv3d(128, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv3b = nn.Conv3d(256, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool3 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv4a = nn.Conv3d(256, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv4b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool4 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv5a = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv5b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool5 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2), padding=(0, 1, 1))
+
+        self.relu = nn.ReLU()
+
+
+    def forward(self, x):
+        h = self.relu(self.conv1(x))
+        h = self.pool1(h)
+
+        h = self.relu(self.conv2(h))
+        h = self.pool2(h)
+
+        h = self.relu(self.conv3a(h))
+        h = self.relu(self.conv3b(h))
+        h = self.pool3(h)
+
+        h = self.relu(self.conv4a(h))
+        h = self.relu(self.conv4b(h))
+        h = self.pool4(h)
+
+        h = self.relu(self.conv5a(h))
+        h = self.relu(self.conv5b(h))
+        h = self.pool5(h)
+
+        h = h.view(-1, 8192)
+        return h
+
+class FullyConnected(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.fc1 = nn.Linear(8192, 4096)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.relu(self.fc1(x))
+        return x
+
 
 class ScoreRegressor(nn.Module):
-    def __init__(self, input_size, hidden_size, out_size):
+    def __init__(self):
         super(ScoreRegressor, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, out_size)
+        self.fc1 = nn.Linear(4096, 1)
     
     def forward(self, x):
         x = self.fc1(x)
-        x = self.relu(x)
-        x = self.fc2(x)
-
         return x
 
 class FeatureExtractionC3D(nn.Module):
@@ -102,21 +153,27 @@ class FeatureExtractionRes3D(nn.Module):
 
 #sample final look of endto end not sure if iys right
 class EndToEndModel(nn.Module):
-    def __init__(self, classifier, final_score_regressor):
+    def __init__(self, classifier, fully_connected, final_score_regressor):
         super(EndToEndModel, self).__init__()
         self.classifier = classifier
+        self.fully_connected = fully_connected
         self.final_score_regressor = final_score_regressor
 
     def forward(self, x):
+        # Classifier (C3DC)
         classification_output = self.classifier(x)
 
+        # Fully Connected Layer
+        fully_connected_output = self.fully_connected(classification_output)
+
         # Final Score Regression
-        final_score = self.final_score_regressor(x)
+        final_score = self.final_score_regressor(fully_connected_output)
 
         return {
             'classification': classification_output,
             'final_score': final_score
         }
+
 
 # Class Definition CNN3D:
 # CNN3D is a subclass of nn.Module, which is the base class for all neural network modules in PyTorch.
