@@ -17,14 +17,14 @@ classifier = C3DC()
 
 labels_path = "../labels/complete_labels.json"
 sample_vids = "../../dissData/train_vids"
-video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(480, 480), num_frames=16)
+video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(128, 128), num_frames=16)
 
 fc = FullyConnected()
 score_reg = ScoreRegressor()
 fc = fc.to(device)
 score_reg = score_reg.to(device)
 
-data_loader = DataLoader(video_dataset, batch_size=5, shuffle=True, collate_fn=lambda batch: [data for data in batch if data is not None])
+data_loader = DataLoader(video_dataset, batch_size=1, shuffle=True, collate_fn=lambda batch: [data for data in batch if data is not None])
 
 eteModel = EndToEndModel(classifier, fc, final_score_regressor=score_reg)
 eteModel = eteModel.to(device)
@@ -39,6 +39,7 @@ summary_writer = SummaryWriter()
 num_epochs = 5
 for epoch in range(num_epochs):
     for i, batch_data in enumerate(data_loader):
+        print(i)
         if batch_data is None:
             continue
         frames = batch_data[i]['video'].to(device)

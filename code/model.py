@@ -76,32 +76,39 @@ class C3DC(nn.Module):
 
         self.conv5a = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
         self.conv5b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.pool5 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2), padding=(0, 0, 0))
+        self.pool5 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(2, 2, 2), padding=(0, 0, 0))
 
         self.relu = nn.ReLU()
-
 
     def forward(self, x):
         h = self.relu(self.conv1(x))
         h = self.pool1(h)
+        print(h.shape, "pool1")
 
         h = self.relu(self.conv2(h))
         h = self.pool2(h)
+        print(h.shape, "pool2")
 
         h = self.relu(self.conv3a(h))
         h = self.relu(self.conv3b(h))
         h = self.pool3(h)
+        print(h.shape, "pool3")
 
         h = self.relu(self.conv4a(h))
         h = self.relu(self.conv4b(h))
         h = self.pool4(h)
+        print(h.shape, "pool4")
 
         h = self.relu(self.conv5a(h))
         h = self.relu(self.conv5b(h))
         h = self.pool5(h)
+        print(h.shape, "pool5")
 
-        h = h.view(-1, 8192)
+        # Adjust the spatial dimensions accordingly
+        h = h.view(h.size(0), -1)
+        print(h.shape, "after view")
         return h
+
 
 class FullyConnected(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
