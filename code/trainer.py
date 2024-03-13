@@ -17,7 +17,7 @@ classifier = C3DC()
 
 labels_path = "../labels/complete_labels.json"
 sample_vids = "../../dissData/train_vids"
-video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(480, 480), num_frames=50)
+video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(480, 480), num_frames=16)
 
 fc = FullyConnected()
 score_reg = ScoreRegressor()
@@ -42,7 +42,7 @@ for epoch in range(num_epochs):
         if batch_data is None:
             continue
         frames = batch_data[i]['video'].to(device)
-        frames = frames.permute(1,0,2,3)
+        frames = frames.permute(1, 0, 2, 3, 4)
         print(frames.shape, f"at {i}")
         
         classification_labels = batch_data[i]['classification'].to(device)
