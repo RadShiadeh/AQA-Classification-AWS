@@ -44,6 +44,9 @@ for epoch in range(num_epochs):
         labels = labels.to(device)
         optimizer.zero_grad()
 
+        eteModel = eteModel.to(device)
+    
+
         outputs = eteModel(frames)
         classification_output = outputs['classification']
         final_score_output = outputs['final_score']

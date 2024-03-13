@@ -6,7 +6,7 @@ import torch
 import cv2
 
 class VideoDataset(DataLoader):
-    def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames = 100):
+    def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames = 10):
         self.data_dir = data_dir
         self.transform = transform
         self.target_size = target_size
