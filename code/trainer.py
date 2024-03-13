@@ -39,7 +39,6 @@ summary_writer = SummaryWriter()
 num_epochs = 5
 for epoch in range(num_epochs):
     for i, batch_data in enumerate(data_loader):
-        print(i)
         if batch_data is None:
             continue
         frames = batch_data[i]['video'].to(device)
