@@ -7,13 +7,14 @@ from PIL import Image
 import cv2
 
 class VideoDataset(Dataset):
-    def __init__(self, root_dir, labels_file, transform=None, resize_shape=(480, 480), num_frames=100):
+    def __init__(self, root_dir, labels_file, transform=None, resize_shape=(480, 480), num_frames=50, overlap=1):
         self.root_dir = root_dir
         self.labels = self.load_labels(labels_file)
         self.video_ids = list(self.labels.keys())
         self.transform = transform
         self.resize_shape = resize_shape
         self.num_frames = num_frames
+        self.overlap = overlap
 
     def __len__(self):
         return len(self.video_ids)
@@ -35,18 +36,24 @@ class VideoDataset(Dataset):
         # Pad or trim frames to have the same size (num_frames)
         frames_resized = self.pad_or_trim_frames(frames_resized)
 
-        # Convert resized frames to a list of tensors (if not already tensors)
-        frames_resized = [transforms.functional.to_tensor(frame) if not isinstance(frame, torch.Tensor) else frame for frame in frames_resized]
+        # Extract overlapping segments
+        video_clip_segments = []
+        for i in range(0, len(frames_resized) - 16 + self.overlap, self.overlap):
+            clip_segment = frames_resized[i:i + 16]
+            video_clip_segments.append(clip_segment)
 
-        # Convert frames_resized to a torch tensor
-        frames = torch.stack(frames_resized)
+        # Convert each clip segment to a torch tensor
+        video_clip_segments = [torch.stack([transforms.functional.to_tensor(frame) for frame in clip_segment]) for clip_segment in video_clip_segments]
+
+        # Convert video_clip_segments to a torch tensor
+        video_clip = torch.stack(video_clip_segments)
 
         # Get classification and score from labels
         classification, score = self.labels[video_id]
 
         # Apply transformations if provided
         if self.transform:
-            frames = self.transform(frames)
+            video_clip = self.transform(video_clip)
 
         # Convert frames and labels to torch tensors
         classification = torch.tensor(classification, dtype=torch.float32)
@@ -54,7 +61,7 @@ class VideoDataset(Dataset):
 
         # Create data dictionary
         data = {
-            'video': frames,
+            'video': video_clip,
             'classification': classification,
             'score': score
         }

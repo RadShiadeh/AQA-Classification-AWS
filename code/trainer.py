@@ -17,14 +17,17 @@ classifier = C3DC()
 
 labels_path = "../labels/complete_labels.json"
 sample_vids = "../../dissData/train_vids"
-video_dataset = VideoDataset(sample_vids, labels_path, transform=None)
+video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(480, 480), num_frames=50)
 
 fc = FullyConnected()
 score_reg = ScoreRegressor()
+fc = fc.to(device)
+score_reg = score_reg.to(device)
 
 data_loader = DataLoader(video_dataset, batch_size=5, shuffle=True, collate_fn=lambda batch: [data for data in batch if data is not None])
 
 eteModel = EndToEndModel(classifier, fc, final_score_regressor=score_reg)
+eteModel = eteModel.to(device)
 
 criterion = nn.BCELoss()
 optimizer = optim.AdamW(eteModel.parameters(), lr=0.00001)
@@ -47,12 +50,13 @@ for epoch in range(num_epochs):
         
         optimizer.zero_grad()
 
-        eteModel = eteModel.to(device)
-
         
         outputs = eteModel(frames)
         classification_output = outputs['classification']
         final_score_output = outputs['final_score']
+
+        final_score_output = torch.sigmoid(final_score_output)
+        classification_output = torch.sigmoid(classification_output)
 
         classification_loss = criterion(classification_output, classification_labels.float().view(-1, 1))
         final_score_loss = criterion(final_score_output, score_labels.float().view(-1, 1))
