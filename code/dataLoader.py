@@ -1,12 +1,12 @@
 import os
 import json
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
 from torchvision.transforms import functional as F
 import torch
 from PIL import Image
-from PIL import Image
+import torchvision.io.video as video
 
-class VideoDataset(DataLoader):
+class VideoDataset(Dataset):
     def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames=10):
         self.data_dir = data_dir
         self.transform = transform
@@ -40,29 +40,16 @@ class VideoDataset(DataLoader):
         return frames
 
     def load_video_frames(self, video_path):
-        frames = []
-        try:
-            cap = cv2.VideoCapture(video_path)
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
+        frames, _, _ = video.read_video(video_path, start_pts=0, end_pts=float('inf'), pts_unit='sec')
+        frames = [self.resize_frame(frame) for frame in frames]
 
-                if self.target_size:
-                    frame = self.resize_frame(frame)
-                frames.append(frame)
-            cap.release()
-        except Exception as e:
-            print(f"Error loading frames for video {video_path}: {e}")
-
-        frames = torch.stack(frames)
-        return frames
+        return torch.stack(frames)
 
     def __getitem__(self, index):
         video_id = self.video_ids[index]
         label = self.data[video_id]
 
-        # Load video frames using OpenCV
+        # Load video frames using torchvision
         video_path = os.path.join(self.data_dir, f'{video_id}.mp4')
         frames = self.load_video_frames(video_path)
 
