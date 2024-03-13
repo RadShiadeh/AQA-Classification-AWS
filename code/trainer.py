@@ -39,7 +39,8 @@ for epoch in range(num_epochs):
         if batch_data is None:
             continue
         frames = batch_data[i]['video'].to(device)
-        print(frames.shape)
+        frames = frames.permute(1,0,2,3)
+        print(frames.shape, f"at {i}")
         
         classification_labels = batch_data[i]['classification'].to(device)
         score_labels = batch_data[i]['score'].to(device)
