@@ -12,15 +12,19 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-
 classifier = C3DC()
 
-labels_path = "../labels/train_labels/train_data.json"
+labels_path = "../labels/complete_labels.json"
 sample_vids = "../../dissData/train_vids"
 video_dataset = VideoDataset(sample_vids, labels_path, transform=None)
 
 sample_index = 0
-sample_frames, sample_label = video_dataset[sample_index]
+sample_data = video_dataset[sample_index]
+sample_frames = sample_data['video']
+sample_label = {
+    'classification': sample_data['classification'],
+    'score': sample_data['score']
+}
 
 fc = FullyConnected()
 score_reg = ScoreRegressor()
@@ -38,21 +42,23 @@ summary_writer = SummaryWriter()
 # Training loop
 num_epochs = 5
 for epoch in range(num_epochs):
-    for batch_idx, (frames, labels) in enumerate(data_loader):
-        frames = frames.to(device)
+    for batch_idx, batch_data in enumerate(data_loader):
+        frames = batch_data['video'].to(device)
         frames = frames.permute(0, 2, 1, 3, 4)
-        labels = labels.to(device)
+        
+        classification_labels = batch_data['classification'].to(device)
+        score_labels = batch_data['score'].to(device)
+        
         optimizer.zero_grad()
 
         eteModel = eteModel.to(device)
     
-
         outputs = eteModel(frames)
         classification_output = outputs['classification']
         final_score_output = outputs['final_score']
 
-        classification_loss = criterion(classification_output, labels.float().view(-1, 1))
-        final_score_loss = criterion(final_score_output, labels.float().view(-1, 1))
+        classification_loss = criterion(classification_output, classification_labels.float().view(-1, 1))
+        final_score_loss = criterion(final_score_output, score_labels.float().view(-1, 1))
 
         loss = classification_loss + final_score_loss
 
