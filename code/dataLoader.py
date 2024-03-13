@@ -1,68 +1,39 @@
 import os
 import json
-from torch.utils.data import Dataset
-from torchvision.transforms import functional as F
+import cv2
 import torch
-from PIL import Image
-import torchvision.io.video as video
+from torch.utils.data import Dataset
 
 class VideoDataset(Dataset):
-    def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames=10):
-        self.data_dir = data_dir
+    def __init__(self, root_dir, labels_file, transform=None):
+        self.root_dir = root_dir
+        self.labels = self.load_labels(labels_file)
+        self.video_ids = list(self.labels.keys())
         self.transform = transform
-        self.target_size = target_size
-        self.num_frames = num_frames
-
-        # Load video paths and labels from JSON file
-        with open(json_file, 'r') as file:
-            self.data = json.load(file)
-
-        self.video_ids = list(self.data.keys())
 
     def __len__(self):
         return len(self.video_ids)
 
-    def resize_frame(self, frame):
-        frame_PIL = Image.fromarray(frame)
-        resized_frame = frame_PIL.resize(self.target_size, Image.BILINEAR)
-        resized_frame = F.to_tensor(resized_frame)
-        return resized_frame
+    def __getitem__(self, idx):
+        video_id = self.video_ids[idx]
+        video_path = os.path.join(self.root_dir, f"{video_id}.mp4")
 
-    def pad_or_trim_frames(self, frames):
-        num_frames = frames.shape[0]
+        # Read video frames
+        frames = self.read_video_frames(video_path)
 
-        if num_frames < self.num_frames:
-            padding = torch.zeros(self.num_frames - num_frames, *frames.shape[1:], dtype=frames.dtype)
-            frames = torch.cat([frames, padding])
-        elif num_frames > self.num_frames:
-            frames = frames[:self.num_frames]
-
-        return frames
-
-    def load_video_frames(self, video_path):
-        frames, _, _ = video.read_video(video_path, start_pts=0, end_pts=float('inf'), pts_unit='sec')
-        frames = [self.resize_frame(frame) for frame in frames]
-
-        return torch.stack(frames)
-
-    def __getitem__(self, index):
-        video_id = self.video_ids[index]
-        label = self.data[video_id]
-
-        # Load video frames using torchvision
-        video_path = os.path.join(self.data_dir, f'{video_id}.mp4')
-        frames = self.load_video_frames(video_path)
+        # Get classification and score from labels
+        classification, score = self.labels[video_id]
 
         # Apply transformations if provided
         if self.transform:
-            frames = [self.transform(frame) for frame in frames]
+            frames = self.transform(frames)
 
-        frames = self.pad_or_trim_frames(frames)
+        # Convert frames and labels to torch tensors
+        frames = torch.tensor(frames, dtype=torch.float32)
+        classification = torch.tensor(classification, dtype=torch.float32)
+        score = torch.tensor(score, dtype=torch.float32)
 
-        # Extract classification and score from label
-        classification, score = label
-
-        # Prepare the data dictionary
+        # Create data dictionary
         data = {
             'video': frames,
             'classification': classification,
@@ -70,6 +41,25 @@ class VideoDataset(Dataset):
         }
 
         return data
+
+    def load_labels(self, labels_file):
+        with open(labels_file, 'r') as file:
+            labels = json.load(file)
+        return labels
+
+    def read_video_frames(self, video_path):
+        # Use OpenCV to read video frames
+        cap = cv2.VideoCapture(video_path)
+        frames = []
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            # Convert BGR to RGB
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frames.append(frame)
+        cap.release()
+        return frames
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     
