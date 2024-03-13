@@ -1,15 +1,19 @@
 import os
 import json
-import cv2
 import torch
 from torch.utils.data import Dataset
+from torchvision import transforms
+from PIL import Image
+import cv2
 
 class VideoDataset(Dataset):
-    def __init__(self, root_dir, labels_file, transform=None):
+    def __init__(self, root_dir, labels_file, transform=None, resize_shape=(480, 480), num_frames=100):
         self.root_dir = root_dir
         self.labels = self.load_labels(labels_file)
         self.video_ids = list(self.labels.keys())
         self.transform = transform
+        self.resize_shape = resize_shape
+        self.num_frames = num_frames
 
     def __len__(self):
         return len(self.video_ids)
@@ -21,6 +25,22 @@ class VideoDataset(Dataset):
         # Read video frames
         frames = self.read_video_frames(video_path)
 
+        # Resize frames to a consistent size
+        frames_resized = [transforms.functional.resize(Image.fromarray(frame), self.resize_shape) for frame in frames]
+
+        # Check if frames_resized is empty
+        if not frames_resized:
+            return None
+
+        # Pad or trim frames to have the same size (num_frames)
+        frames_resized = self.pad_or_trim_frames(frames_resized)
+
+        # Convert resized frames to a list of tensors (if not already tensors)
+        frames_resized = [transforms.functional.to_tensor(frame) if not isinstance(frame, torch.Tensor) else frame for frame in frames_resized]
+
+        # Convert frames_resized to a torch tensor
+        frames = torch.stack(frames_resized)
+
         # Get classification and score from labels
         classification, score = self.labels[video_id]
 
@@ -29,7 +49,6 @@ class VideoDataset(Dataset):
             frames = self.transform(frames)
 
         # Convert frames and labels to torch tensors
-        frames = torch.tensor(frames, dtype=torch.float32)
         classification = torch.tensor(classification, dtype=torch.float32)
         score = torch.tensor(score, dtype=torch.float32)
 
@@ -60,6 +79,26 @@ class VideoDataset(Dataset):
             frames.append(frame)
         cap.release()
         return frames
+
+    def pad_or_trim_frames(self, frames):
+        # Check if frames list is empty
+        if not frames:
+            return frames
+
+        # Convert the first frame to a tensor to get the shape
+        first_frame_tensor = transforms.functional.to_tensor(frames[0])
+
+        # Trim or pad frames to have the same size (num_frames)
+        if len(frames) < self.num_frames:
+            # Padding frames with dark frames
+            frames += [torch.zeros_like(first_frame_tensor) for _ in range(self.num_frames - len(frames))]
+        else:
+            # Trimming frames
+            frames = frames[:self.num_frames]
+
+        return frames
+
+
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     

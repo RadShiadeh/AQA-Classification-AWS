@@ -6,6 +6,7 @@ from torch.utils.tensorboard import SummaryWriter
 from model import C3DC, FullyConnected, ScoreRegressor, EndToEndModel
 from dataLoader import VideoDataset
 
+
 # Check if GPU is available
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -18,18 +19,10 @@ labels_path = "../labels/complete_labels.json"
 sample_vids = "../../dissData/train_vids"
 video_dataset = VideoDataset(sample_vids, labels_path, transform=None)
 
-sample_index = 0
-sample_data = video_dataset[sample_index]
-sample_frames = sample_data['video']
-sample_label = {
-    'classification': sample_data['classification'],
-    'score': sample_data['score']
-}
-
 fc = FullyConnected()
 score_reg = ScoreRegressor()
 
-data_loader = DataLoader(video_dataset, batch_size=5, shuffle=True)
+data_loader = DataLoader(video_dataset, batch_size=5, shuffle=True, collate_fn=lambda batch: [data for data in batch if data is not None])
 
 eteModel = EndToEndModel(classifier, fc, final_score_regressor=score_reg)
 
@@ -42,17 +35,20 @@ summary_writer = SummaryWriter()
 # Training loop
 num_epochs = 5
 for epoch in range(num_epochs):
-    for batch_idx, batch_data in enumerate(data_loader):
-        frames = batch_data['video'].to(device)
-        frames = frames.permute(0, 2, 1, 3, 4)
+    for i, batch_data in enumerate(data_loader):
+        if batch_data is None:
+            continue
+        frames = batch_data[i]['video'].to(device)
+        print(frames.shape)
         
-        classification_labels = batch_data['classification'].to(device)
-        score_labels = batch_data['score'].to(device)
+        classification_labels = batch_data[i]['classification'].to(device)
+        score_labels = batch_data[i]['score'].to(device)
         
         optimizer.zero_grad()
 
         eteModel = eteModel.to(device)
-    
+
+        
         outputs = eteModel(frames)
         classification_output = outputs['classification']
         final_score_output = outputs['final_score']
@@ -67,7 +63,8 @@ for epoch in range(num_epochs):
         optimizer.step()
 
         # Log loss to TensorBoard
-        global_step = epoch * len(data_loader) + batch_idx
+        global_step = epoch * len(data_loader) + i
+        i += 1
         summary_writer.add_scalar('Loss', loss.item(), global_step)
 
         print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}')
