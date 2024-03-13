@@ -3,10 +3,11 @@ import json
 from torch.utils.data import DataLoader
 from torchvision.transforms import functional as F
 import torch
-import cv2
+from PIL import Image
+from PIL import Image
 
 class VideoDataset(DataLoader):
-    def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames = 10):
+    def __init__(self, data_dir, json_file, transform=None, target_size=(480, 480), num_frames=10):
         self.data_dir = data_dir
         self.transform = transform
         self.target_size = target_size
@@ -14,21 +15,19 @@ class VideoDataset(DataLoader):
 
         # Load video paths and labels from JSON file
         with open(json_file, 'r') as file:
-            data = json.load(file)
+            self.data = json.load(file)
 
-        self.video_ids = list(data.keys())
-        self.labels = list(data.values())
+        self.video_ids = list(self.data.keys())
 
     def __len__(self):
         return len(self.video_ids)
-    
-    def resize_frame(self, frame):
-        frame_PIL = F.to_pil_image(frame)
-        resised_frame = F.resize(frame_PIL, self.target_size)
-        resised_frame = F.to_tensor(resised_frame)
 
-        return resised_frame
-    
+    def resize_frame(self, frame):
+        frame_PIL = Image.fromarray(frame)
+        resized_frame = frame_PIL.resize(self.target_size, Image.BILINEAR)
+        resized_frame = F.to_tensor(resized_frame)
+        return resized_frame
+
     def pad_or_trim_frames(self, frames):
         num_frames = frames.shape[0]
 
@@ -37,31 +36,31 @@ class VideoDataset(DataLoader):
             frames = torch.cat([frames, padding])
         elif num_frames > self.num_frames:
             frames = frames[:self.num_frames]
-        
-        return frames
-    
-    def load_video_frames(self, video_path):
-        cap = cv2.VideoCapture(video_path)
-        frames = []
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            
-            if self.target_size:
-                frame = cv2.resize(frame, self.target_size[::-1])
-            
-            frame = F.to_tensor(frame)
-            frames.append(frame)
-            
-        cap.release()
+        return frames
+
+    def load_video_frames(self, video_path):
+        frames = []
+        try:
+            cap = cv2.VideoCapture(video_path)
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                if self.target_size:
+                    frame = self.resize_frame(frame)
+                frames.append(frame)
+            cap.release()
+        except Exception as e:
+            print(f"Error loading frames for video {video_path}: {e}")
+
         frames = torch.stack(frames)
         return frames
 
     def __getitem__(self, index):
         video_id = self.video_ids[index]
-        label = self.labels[index]
+        label = self.data[video_id]
 
         # Load video frames using OpenCV
         video_path = os.path.join(self.data_dir, f'{video_id}.mp4')
@@ -70,12 +69,20 @@ class VideoDataset(DataLoader):
         # Apply transformations if provided
         if self.transform:
             frames = [self.transform(frame) for frame in frames]
-        
-        frames = [self.resize_frame(frame) for frame in frames]
-        frames = torch.stack(frames)
+
         frames = self.pad_or_trim_frames(frames)
 
-        return frames, label
+        # Extract classification and score from label
+        classification, score = label
+
+        # Prepare the data dictionary
+        data = {
+            'video': frames,
+            'classification': classification,
+            'score': score
+        }
+
+        return data
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     
