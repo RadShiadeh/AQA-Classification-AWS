@@ -41,38 +41,44 @@ summary_writer = SummaryWriter()
 # Training loop
 num_epochs = batch_size
 for epoch in range(num_epochs):
-    for i, batch_data in enumerate(data_loader):
-        frames = batch_data[i]['video'].to(device)
-        frames = frames.permute(0, 2, 1, 3, 4)
+    print("in epoch")
+    for iteration, batch_data in enumerate(data_loader):
+        print("in dataloader")
+        for data in batch_data:
+            print("made it here")
+            frames = data['video'].to(device)
+            frames = frames.permute(0, 2, 1, 3, 4)
 
-        classification_labels = batch_data[i]['classification'].to(device)
-        score_labels = batch_data[i]['score'].to(device)
-        
-        optimizer.zero_grad()
+            classification_labels = data['classification'].to(device)
+            score_labels = data['score'].to(device)
+            
+            optimizer.zero_grad()
 
-        
-        outputs = eteModel(frames)
-        classification_output = outputs['classification']
-        final_score_output = outputs['final_score']
+            print("loaded everything, training now")
+            outputs = eteModel(frames)
+            print("got outs")
+            classification_output = outputs['classification']
+            final_score_output = outputs['final_score']
 
-        final_score_output = torch.sigmoid(final_score_output)
-        classification_output = torch.sigmoid(classification_output)
+            final_score_output = torch.sigmoid(final_score_output)
+            classification_output = torch.sigmoid(classification_output)
 
-        classification_loss = criterion_classification(classification_output, classification_labels.float().view(-1, 1))
-        final_score_loss = criterion_scorer(final_score_output, score_labels.float().view(-1, 1))
+            classification_loss = criterion_classification(classification_output, classification_labels.float().view(-1, 1))
+            final_score_loss = criterion_scorer(final_score_output, score_labels.float().view(-1, 1))
+            print("got final res")
 
-        loss = classification_loss + final_score_loss
+            loss = classification_loss + final_score_loss
 
-        # Backward pass and optimization
-        loss.backward()
-        optimizer.step()
+            # Backward pass and optimization
+            loss.backward()
+            optimizer.step()
 
-        # Log loss to TensorBoard
-        global_step = epoch * len(data_loader) + i
-        summary_writer.add_scalar('Loss', loss.item(), global_step)
-
-        if (epoch % 2 == 0):
-            print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}')
+            # Log loss to TensorBoard
+            global_step = epoch * 380 + iteration
+            summary_writer.add_scalar('Loss', loss.item(), global_step)
+            
+            
+            print(f'Epoch {epoch + 1}/{num_epochs}, Iteration {iteration + 1}, Loss: {loss.item()}')
 
 # Close the SummaryWriter when done
 summary_writer.close()
