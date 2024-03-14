@@ -42,7 +42,7 @@ summary_writer = SummaryWriter()
 num_epochs = batch_size
 for epoch in range(num_epochs):
     for i, batch_data in enumerate(data_loader):
-        frames = batch_data['video'].to(device)
+        frames = batch_data[i]['video'].to(device)
         frames = frames.permute(0, 2, 1, 3, 4)
 
         classification_labels = batch_data[i]['classification'].to(device)
