@@ -31,7 +31,8 @@ class VideoDataset(Dataset):
 
         # Check if frames_resized is empty
         if not frames_resized:
-            return None
+            # Skip this sample and move to the next one
+            return self.__getitem__((idx + 1) % len(self))
 
         # Pad or trim frames to have the same size (num_frames)
         frames_resized = self.pad_or_trim_frames(frames_resized)
@@ -67,6 +68,7 @@ class VideoDataset(Dataset):
         }
 
         return data
+
 
     def load_labels(self, labels_file):
         with open(labels_file, 'r') as file:
@@ -104,63 +106,3 @@ class VideoDataset(Dataset):
             frames = frames[:self.num_frames]
 
         return frames
-
-
-
-# -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    
-# labels_path = "../../dissData/labels/all_labels.json"
-# sample_vids = "../../dissData/allVids"
-
-# video_dataset = VideoDataset(sample_vids, labels_path, transform=None)
-
-# Accessing a specific sample
-# sample_index = 0
-# sample_frames, sample_label = video_dataset[sample_index]
-
-# # Print the shapes for demonstration
-# batch_size = 4
-# data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
-
-# # Iterate through the DataLoader
-# for batch_frames, batch_labels in data_loader:
-#     # Print information about the batch
-#     print(f"Batch Frames Shape: {batch_frames.shape}")
-#     print(f"Batch Labels: {batch_labels}")
-
-#     # Access individual samples within the batch
-#     for frames, label in zip(batch_frames, batch_labels):
-#         print(f"Sample Frames Shape: {frames.shape}")
-#         print(f"Sample Label: {label}")
-
-
-
-
-
-
-
-
-# Class Definition:
-
-# VideoDataset is a subclass of DataLoader, but it's more appropriate to inherit from torch.utils.data.Dataset.
-# It is designed to load video data for a PyTorch model.
-# Initialization:
-
-# The __init__ method initializes the dataset with necessary parameters such as the data directory (data_dir), JSON file with video paths and labels (json_file), optional transformation (transform), target size for resizing frames (target_size), and the desired number of frames (num_frames).
-# Length Method:
-
-# The __len__ method returns the number of video samples in the dataset.
-# Video Loading and Processing Methods:
-
-# resize_frame: Resizes a frame to the specified target size.
-# pad_or_trim_frames: Ensures that the video has the desired number of frames by padding or trimming.
-# load_video_frames: Loads frames from a video file using OpenCV.
-# __getitem__ Method:
-
-# The __getitem__ method loads and processes a single video sample specified by the given index.
-# It loads video frames, applies transformations, resizes frames, and ensures the correct number of frames.
-# Returns a tuple containing the processed frames and the corresponding label.
-# Usage Example:
-
-# The script demonstrates how to create an instance of VideoDataset and access individual samples using a PyTorch DataLoader.
-# The commented-out code at the end provides an example of using the dataset with a DataLoader and iterating through batches.

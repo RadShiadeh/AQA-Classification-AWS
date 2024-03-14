@@ -24,25 +24,25 @@ fc = FullyConnected()
 score_reg = ScoreRegressor()
 fc = fc.to(device)
 score_reg = score_reg.to(device)
+batch_size = 10
 
-data_loader = DataLoader(video_dataset, batch_size=1, shuffle=True, collate_fn=lambda batch: [data for data in batch if data is not None])
+data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True, collate_fn=lambda batch: [data for data in batch if data is not None])
 
 eteModel = EndToEndModel(classifier, cnnLayer, fc, final_score_regressor=score_reg)
 eteModel = eteModel.to(device)
 
-criterion = nn.BCELoss()
+criterion_classification = nn.BCELoss()
+criterion_scorer = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(eteModel.parameters(), lr=0.00001)
 
 # SummaryWriter setup
 summary_writer = SummaryWriter()
 
 # Training loop
-num_epochs = 5
+num_epochs = batch_size
 for epoch in range(num_epochs):
     for i, batch_data in enumerate(data_loader):
-        if batch_data is None:
-            continue
-        frames = batch_data[i]['video'].to(device)
+        frames = batch_data['video'].to(device)
         frames = frames.permute(0, 2, 1, 3, 4)
 
         classification_labels = batch_data[i]['classification'].to(device)
@@ -58,8 +58,8 @@ for epoch in range(num_epochs):
         final_score_output = torch.sigmoid(final_score_output)
         classification_output = torch.sigmoid(classification_output)
 
-        classification_loss = criterion(classification_output, classification_labels.float().view(-1, 1))
-        final_score_loss = criterion(final_score_output, score_labels.float().view(-1, 1))
+        classification_loss = criterion_classification(classification_output, classification_labels.float().view(-1, 1))
+        final_score_loss = criterion_scorer(final_score_output, score_labels.float().view(-1, 1))
 
         loss = classification_loss + final_score_loss
 
@@ -69,10 +69,10 @@ for epoch in range(num_epochs):
 
         # Log loss to TensorBoard
         global_step = epoch * len(data_loader) + i
-        i += 1
         summary_writer.add_scalar('Loss', loss.item(), global_step)
 
-        print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}')
+        if (epoch % 2 == 0):
+            print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}')
 
 # Close the SummaryWriter when done
 summary_writer.close()
