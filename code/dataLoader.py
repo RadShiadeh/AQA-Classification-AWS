@@ -7,7 +7,7 @@ from PIL import Image
 import cv2
 
 class VideoDataset(Dataset):
-    def __init__(self, root_dir, labels_file, transform=None, resize_shape=(128, 128), num_frames=16, overlap=1):
+    def __init__(self, root_dir, labels_file, transform=None, resize_shape=(256, 256), num_frames=16, overlap=1):
         self.root_dir = root_dir
         self.labels = self.load_labels(labels_file)
         self.video_ids = list(self.labels.keys())

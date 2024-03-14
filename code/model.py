@@ -59,6 +59,9 @@ class CNN3D(nn.Module):
 class C3DC(nn.Module):
     def __init__(self):
         super(C3DC, self).__init__()
+        self.pre_conv = nn.Conv3d(3, 3, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pre_pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+
 
         self.conv1 = nn.Conv3d(3, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
         self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
@@ -81,7 +84,11 @@ class C3DC(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        h = self.relu(self.conv1(x))
+        h = self.relu(self.pre_conv(x))
+        h = self.pre_pool(h)
+        print(h.shape, "pre1")
+
+        h = self.relu(self.conv1(h))
         h = self.pool1(h)
         print(h.shape, "pool1")
 
@@ -107,6 +114,7 @@ class C3DC(nn.Module):
         # Adjust the spatial dimensions accordingly
         h = h.view(h.size(0), -1)
         print(h.shape, "after view")
+        import sys; sys.exit(0)
         return h
 
 

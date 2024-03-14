@@ -17,7 +17,7 @@ classifier = C3DC()
 
 labels_path = "../labels/complete_labels.json"
 sample_vids = "../../dissData/train_vids"
-video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(128, 128), num_frames=16)
+video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(256, 256), num_frames=16)
 
 fc = FullyConnected()
 score_reg = ScoreRegressor()
