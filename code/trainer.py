@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from model import C3DC, FullyConnected, ScoreRegressor, EndToEndModel
+from model import C3DC, FullyConnected, ScoreRegressor, EndToEndModel, ClassifierCNN3D
 from dataLoader import VideoDataset
 
 
@@ -13,12 +13,13 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-classifier = C3DC()
+classifier = ClassifierCNN3D()
 
 labels_path = "../labels/complete_labels.json"
 sample_vids = "../../dissData/train_vids"
 video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(256, 256), num_frames=16)
 
+cnnLayer = C3DC()
 fc = FullyConnected()
 score_reg = ScoreRegressor()
 fc = fc.to(device)
@@ -26,7 +27,7 @@ score_reg = score_reg.to(device)
 
 data_loader = DataLoader(video_dataset, batch_size=1, shuffle=True, collate_fn=lambda batch: [data for data in batch if data is not None])
 
-eteModel = EndToEndModel(classifier, fc, final_score_regressor=score_reg)
+eteModel = EndToEndModel(classifier, cnnLayer, fc, final_score_regressor=score_reg)
 eteModel = eteModel.to(device)
 
 criterion = nn.BCELoss()
@@ -43,8 +44,7 @@ for epoch in range(num_epochs):
             continue
         frames = batch_data[i]['video'].to(device)
         frames = frames.permute(0, 2, 1, 3, 4)
-        print(frames.shape, f"at {i}")
-        
+
         classification_labels = batch_data[i]['classification'].to(device)
         score_labels = batch_data[i]['score'].to(device)
         

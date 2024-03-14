@@ -4,9 +4,9 @@ import torch
 import torchvision.models as models
 
 
-class CNN3D(nn.Module):
-    def __init__(self, t_dim=100, img_x=480, img_y=480, fc_hidden=256, num_classes=2):
-        super(CNN3D, self).__init__()
+class ClassifierCNN3D(nn.Module):
+    def __init__(self, t_dim=16, img_x=256, img_y=256, fc_hidden=256, num_classes=2):
+        super(ClassifierCNN3D, self).__init__()
 
         self.t_dim = t_dim
         self.img_x = img_x
@@ -86,35 +86,27 @@ class C3DC(nn.Module):
     def forward(self, x):
         h = self.relu(self.pre_conv(x))
         h = self.pre_pool(h)
-        print(h.shape, "pre1")
 
         h = self.relu(self.conv1(h))
         h = self.pool1(h)
-        print(h.shape, "pool1")
 
         h = self.relu(self.conv2(h))
         h = self.pool2(h)
-        print(h.shape, "pool2")
 
         h = self.relu(self.conv3a(h))
         h = self.relu(self.conv3b(h))
         h = self.pool3(h)
-        print(h.shape, "pool3")
 
         h = self.relu(self.conv4a(h))
         h = self.relu(self.conv4b(h))
         h = self.pool4(h)
-        print(h.shape, "pool4")
 
         h = self.relu(self.conv5a(h))
         h = self.relu(self.conv5b(h))
         h = self.pool5(h)
-        print(h.shape, "pool5")
 
         # Adjust the spatial dimensions accordingly
         h = h.view(h.size(0), -1)
-        print(h.shape, "after view")
-        import sys; sys.exit(0)
         return h
 
 
@@ -168,24 +160,22 @@ class FeatureExtractionRes3D(nn.Module):
 
 #sample final look of endto end not sure if iys right
 class EndToEndModel(nn.Module):
-    def __init__(self, classifier, fully_connected, final_score_regressor):
+    def __init__(self, classifier, cnnLayer, fully_connected, final_score_regressor):
         super(EndToEndModel, self).__init__()
         self.classifier = classifier
+        self.cnnLayer = cnnLayer
         self.fully_connected = fully_connected
         self.final_score_regressor = final_score_regressor
 
     def forward(self, x):
-        # Classifier (C3DC)
         classification_output = self.classifier(x)
 
-        # Fully Connected Layer
-        fully_connected_output = self.fully_connected(classification_output)
-
-        # Final Score Regression
+        cnnLayer_out = self.cnnLayer(x)
+        fully_connected_output = self.fully_connected(cnnLayer_out)
         final_score = self.final_score_regressor(fully_connected_output)
 
         return {
-            'classification': classification_output,
+            'classification': torch.sigmoid(classification_output),  # Apply sigmoid activation
             'final_score': final_score
         }
 
