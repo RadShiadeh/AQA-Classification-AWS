@@ -15,7 +15,7 @@ else:
 
 classifier = ClassifierCNN3D()
 
-labels_path = "../labels/complete_labels.json"
+labels_path = "../labels/train_labels/train_labels.json"
 sample_vids = "../../dissData/train_vids"
 video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(256, 256), num_frames=16)
 
@@ -24,7 +24,7 @@ fc = FullyConnected()
 score_reg = ScoreRegressor()
 fc = fc.to(device)
 score_reg = score_reg.to(device)
-batch_size = 10
+batch_size = 100
 
 data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True, collate_fn=lambda batch: [data for data in batch if data is not None])
 
@@ -41,44 +41,35 @@ summary_writer = SummaryWriter()
 # Training loop
 num_epochs = batch_size
 for epoch in range(num_epochs):
-    print("in epoch")
-    for iteration, batch_data in enumerate(data_loader):
-        print("in dataloader")
-        for data in batch_data:
-            print("made it here")
-            frames = data['video'].to(device)
-            frames = frames.permute(0, 2, 1, 3, 4)
+    for i, batch_data in enumerate(data_loader):
+        frames = batch_data[i]['video'].to(device)
+        frames = frames.permute(0, 2, 1, 3, 4)
+        
+        classification_labels = batch_data[i]['classification'].to(device)
+        score_labels = batch_data[i]['score'].to(device)
+        
+        optimizer.zero_grad()
 
-            classification_labels = data['classification'].to(device)
-            score_labels = data['score'].to(device)
-            
-            optimizer.zero_grad()
+        
+        outputs = eteModel(frames)
+        classification_output = outputs['classification']
+        final_score_output = outputs['final_score']
 
-            print("loaded everything, training now")
-            outputs = eteModel(frames)
-            print("got outs")
-            classification_output = outputs['classification']
-            final_score_output = outputs['final_score']
+        classification_loss = criterion_classification(classification_output, classification_labels.float().view(-1, 1))
+        final_score_loss = criterion_scorer(final_score_output, score_labels.float().view(-1, 1))
 
-            final_score_output = torch.sigmoid(final_score_output)
-            classification_output = torch.sigmoid(classification_output)
+        loss = classification_loss + final_score_loss
 
-            classification_loss = criterion_classification(classification_output, classification_labels.float().view(-1, 1))
-            final_score_loss = criterion_scorer(final_score_output, score_labels.float().view(-1, 1))
-            print("got final res")
+        # Backward pass and optimization
+        loss.backward()
+        optimizer.step()
 
-            loss = classification_loss + final_score_loss
+        # Log loss to TensorBoard
+        global_step = epoch * len(data_loader) + i
+        i += 1
+        summary_writer.add_scalar('Loss', loss.item(), global_step)
 
-            # Backward pass and optimization
-            loss.backward()
-            optimizer.step()
-
-            # Log loss to TensorBoard
-            global_step = epoch * 380 + iteration
-            summary_writer.add_scalar('Loss', loss.item(), global_step)
-            
-            
-            print(f'Epoch {epoch + 1}/{num_epochs}, Iteration {iteration + 1}, Loss: {loss.item()}')
+        print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}')
 
 # Close the SummaryWriter when done
 summary_writer.close()
