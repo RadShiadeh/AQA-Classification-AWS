@@ -66,7 +66,6 @@ for epoch in range(num_epochs):
 
         # Log loss to TensorBoard
         global_step = epoch * len(data_loader) + i
-        i += 1
         summary_writer.add_scalar('Loss', loss.item(), global_step)
 
         print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}')
