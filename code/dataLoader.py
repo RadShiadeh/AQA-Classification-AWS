@@ -7,14 +7,13 @@ from PIL import Image
 import cv2
 
 class VideoDataset(Dataset):
-    def __init__(self, root_dir, labels_file, transform=None, resize_shape=(256, 256), num_frames=16, overlap=1):
+    def __init__(self, root_dir, labels_file, transform=None, resize_shape=(256, 256), num_frames=16):
         self.root_dir = root_dir
         self.labels = self.load_labels(labels_file)
         self.video_ids = list(self.labels.keys())
         self.transform = transform
         self.resize_shape = resize_shape
         self.num_frames = num_frames
-        self.overlap = overlap
 
     def __len__(self):
         return len(self.video_ids)
@@ -29,39 +28,25 @@ class VideoDataset(Dataset):
         # Resize frames to a consistent size
         frames_resized = [transforms.functional.resize(Image.fromarray(frame), self.resize_shape) for frame in frames]
 
-        # Check if frames_resized is empty
-        if not frames_resized:
-            # Skip this sample and move to the next one
-            return self.__getitem__((idx + 1) % len(self))
+        # Convert frames_resized to a torch tensor
+        frames_tensor = torch.stack([transforms.functional.to_tensor(frame) for frame in frames_resized])
 
-        # Pad or trim frames to have the same size (num_frames)
-        frames_resized = self.pad_or_trim_frames(frames_resized)
-
-        # Extract overlapping segments
-        video_clip_segments = []
-        for i in range(0, len(frames_resized) - 16 + self.overlap, self.overlap):
-            clip_segment = frames_resized[i:i + 16]
-            video_clip_segments.append(clip_segment)
-
-        # Convert each clip segment to a torch tensor
-        video_clip_segments = [torch.stack([transforms.functional.to_tensor(frame) for frame in clip_segment]) for clip_segment in video_clip_segments]
-
-        # Convert video_clip_segments to a torch tensor
-        video_clip = torch.stack(video_clip_segments)
+        # Ensure the number of frames is consistent
+        if len(frames_tensor) < self.num_frames:
+            # Padding frames with zeros
+            frames_tensor = torch.cat([frames_tensor, torch.zeros(self.num_frames - len(frames_tensor), 3, *self.resize_shape)], dim=0)
+        elif len(frames_tensor) > self.num_frames:
+            # Trimming frames
+            frames_tensor = frames_tensor[:self.num_frames]
 
         # Get classification and score from labels
-        classification, score = self.labels[video_id]
+        classification_label, score_label = self.labels[video_id]
 
-        # Apply transformations if provided
-        if self.transform:
-            video_clip = self.transform(video_clip)
+        # Convert labels to torch tensors
+        classification_label_tensor = torch.tensor(classification_label, dtype=torch.float32).view(1)
+        score_label_tensor = torch.tensor(score_label, dtype=torch.float32).view(1)
 
-        # Convert frames and labels to torch tensors
-        classification = torch.tensor(classification, dtype=torch.float32)
-        score = torch.tensor(score, dtype=torch.float32)
-
-        return video_clip, classification, score
-
+        return frames_tensor, classification_label_tensor, score_label_tensor
 
     def load_labels(self, labels_file):
         with open(labels_file, 'r') as file:
@@ -80,22 +65,4 @@ class VideoDataset(Dataset):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frames.append(frame)
         cap.release()
-        return frames
-
-    def pad_or_trim_frames(self, frames):
-        # Check if frames list is empty
-        if not frames:
-            return frames
-
-        # Convert the first frame to a tensor to get the shape
-        first_frame_tensor = transforms.functional.to_tensor(frames[0])
-
-        # Trim or pad frames to have the same size (num_frames)
-        if len(frames) < self.num_frames:
-            # Padding frames with dark frames
-            frames += [torch.zeros_like(first_frame_tensor) for _ in range(self.num_frames - len(frames))]
-        else:
-            # Trimming frames
-            frames = frames[:self.num_frames]
-
         return frames
