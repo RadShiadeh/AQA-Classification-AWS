@@ -60,14 +60,7 @@ class VideoDataset(Dataset):
         classification = torch.tensor(classification, dtype=torch.float32)
         score = torch.tensor(score, dtype=torch.float32)
 
-        # Create data dictionary
-        data = {
-            'video': video_clip,
-            'classification': classification,
-            'score': score
-        }
-
-        return data
+        return video_clip, classification, score
 
 
     def load_labels(self, labels_file):
