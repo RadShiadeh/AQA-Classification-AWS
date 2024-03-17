@@ -9,6 +9,7 @@ from dataLoader import VideoDataset
 
 step = 0
 log_frequency = 5
+running_loss_print_freq = 50
 
 def print_metrics(epoch, loss, data_load_time, step_time, loss_type):
         epoch_step = step % len(video_dataset)
@@ -54,9 +55,12 @@ video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_sh
 cnnLayer = C3DC()
 fc = FullyConnected()
 score_reg = ScoreRegressor()
+
 fc = fc.to(device)
 score_reg = score_reg.to(device)
-batch_size = 16
+cnnLayer = cnnLayer.to(device)
+
+batch_size = 1
 
 data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 
@@ -72,7 +76,7 @@ optimizer = optim.AdamW(all_params, lr=0.0001)
 
 summary_writer = SummaryWriter()
 
-num_epochs = 50
+num_epochs = 20
 for epoch in range(num_epochs):
     print('-------------------------------------------------------------------------------------------------------')
     eteModel.train()
@@ -103,8 +107,10 @@ for epoch in range(num_epochs):
 
         classification_running_loss += classification_loss.item()
         scorer_running_loss += final_score_loss.item()
-        print(f"average loss per mini batch of classification loss:  {classification_running_loss / 16:.3f}")
-        print(f"average loss per mini batch of scorer loss: {scorer_running_loss / 16:.3f}")
+
+        if ((step+1) % running_loss_print_freq) == 0:
+            print(f"average running loss per mini batch of classification loss: {classification_running_loss / batch_size:.3f} at [epoch, step]: {[epoch+1, step+1]}")
+            print(f"average running loss per mini batch of scorer loss: {scorer_running_loss / batch_size:.3f} at [epoch, step]: {[epoch+1, step+1]}")
 
         data_load_time = data_load_end_time - data_load_start_time
         step_time = time.time() - data_load_end_time
@@ -112,8 +118,8 @@ for epoch in range(num_epochs):
             log_metrics(epoch, classification_loss, data_load_time, step_time)
             log_metrics(epoch, final_score_loss, data_load_time, step_time)
         if ((step + 1) % print_frequency) == 0:
-            print_metrics(epoch,  classification_loss, data_load_time, step_time, "classification")
-            print_metrics(epoch,  final_score_loss, data_load_time, step_time, "scorer")
+            print_metrics(epoch+1, classification_loss, data_load_time, step_time, "classification")
+            print_metrics(epoch+1, final_score_loss, data_load_time, step_time, "scorer")
 
         step += 1
 

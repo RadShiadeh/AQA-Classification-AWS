@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH --job-name=lab2
+#SBATCH --job-name=AQA
 #SBATCH --partition=teach_gpu
 #SBATCH --nodes=1
 #SBATCH -o ./log_%j.out # STDOUT out
