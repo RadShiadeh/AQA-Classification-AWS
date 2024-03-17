@@ -78,11 +78,10 @@ optimizer = optim.AdamW(all_params, lr=0.0001)
 
 summary_writer = SummaryWriter()
 
-num_epochs = 20
+num_epochs = 5
 print("loaded all models, going into training loop")
 for epoch in range(num_epochs):
     print('-------------------------------------------------------------------------------------------------------')
-    eteModel.train()
     data_load_start_time = time.time()
     classification_running_loss = 0.0
     scorer_running_loss = 0.0
@@ -93,6 +92,8 @@ for epoch in range(num_epochs):
         score_labels = batch_data[2].type(torch.FloatTensor).to(device)
 
         data_load_end_time = time.time()
+
+        eteModel.train()
         
         optimizer.zero_grad()
             

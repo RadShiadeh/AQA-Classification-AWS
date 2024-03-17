@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
 #SBATCH --job-name=AQA
-#SBATCH --partition=teach_gpu
-#SBATCH --nodes=1
+#SBATCH --partition=gpu
+#SBATCH --nodes=2
 #SBATCH -o ./log_%j.out # STDOUT out
 #SBATCH -e ./log_%j.err # STDERR out
-#SBATCH --account=coms030144
+#SBATCH --account=COMS030144
 #SBATCH --gres=gpu:2  # Requesting 2 GPUs
-#SBATCH --time=2:00:00  # Requesting 2 hours
+#SBATCH --time=24:00:00  # Requesting 10 hours
 #SBATCH --mem=8GB  # Requesting 8GB of memory
 #SBATCH --cpus-per-task=10
 
