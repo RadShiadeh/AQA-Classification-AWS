@@ -7,6 +7,8 @@ from torch.utils.tensorboard import SummaryWriter
 from model import C3DC, FullyConnected, ScoreRegressor, EndToEndModel, ClassifierCNN3D
 from dataLoader import VideoDataset
 
+print("starting")
+
 step = 0
 log_frequency = 5
 running_loss_print_freq = 50
@@ -77,6 +79,7 @@ optimizer = optim.AdamW(all_params, lr=0.0001)
 summary_writer = SummaryWriter()
 
 num_epochs = 20
+print("loaded all models, going into training loop")
 for epoch in range(num_epochs):
     print('-------------------------------------------------------------------------------------------------------')
     eteModel.train()
@@ -122,6 +125,10 @@ for epoch in range(num_epochs):
             print_metrics(epoch+1, final_score_loss, data_load_time, step_time, "scorer")
 
         step += 1
+
+    if (epoch + 1) % 10 == 0:
+        torch.save(eteModel.state_dict(), 'ETE_model.pth')
+    
 
 
 summary_writer.close()
