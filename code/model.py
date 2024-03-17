@@ -178,29 +178,3 @@ class EndToEndModel(nn.Module):
             'classification': torch.sigmoid(classification_output),  # Apply sigmoid activation
             'final_score': final_score
         }
-
-
-# Class Definition CNN3D:
-# CNN3D is a subclass of nn.Module, which is the base class for all neural network modules in PyTorch.
-# Initialization:
-
-# The __init__ method initializes the parameters and layers of the model.
-# Parameters include dimensions (t_dim, img_x, img_y), dropout probability (drop_p), hidden layer sizes (fc1_hidden, fc2_hidden), and the number of output classes (num_classes).
-# Convolutional layer parameters such as number of channels (ch1, ch2), kernel sizes (kernel1, kernel2), strides (stride1, stride2), and paddings (padd1, padd2) are also set.
-# Convolutional Layers:
-
-# Two convolutional layers (conv1, conv2) are defined with batch normalization (bn1, bn2) and ReLU activation (relu).
-# Max pooling (pool) is applied after each convolutional layer.
-# Linear Layers (Fully Connected):
-
-# Three fully connected layers (fc1, fc2, fc3) are defined with ReLU activation in the first two.
-# The final layer (fc3) outputs a single value after applying the sigmoid activation function.
-# Forward Method:
-
-# The forward method defines the forward pass of the network.
-# Applies the convolutional layers, batch normalization, ReLU activation, and dropout.
-# Reshapes the output and applies fully connected layers with ReLU activation and dropout.
-# The final output is obtained by applying the sigmoid activation.
-# Static Method:
-
-# conv3D_output_size is a static method that computes the output size of a 3D convolutional layer given input size, padding, kernel size, and stride

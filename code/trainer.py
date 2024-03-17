@@ -77,7 +77,9 @@ for epoch in range(num_epochs):
     print('-------------------------------------------------------------------------------------------------------')
     eteModel.train()
     data_load_start_time = time.time()
-    for i, batch_data in enumerate(data_loader):
+    classification_running_loss = 0.0
+    scorer_running_loss = 0.0
+    for _, batch_data in enumerate(data_loader):
         frames = batch_data[0].type(torch.FloatTensor).to(device)
         frames = frames.permute(0, 2, 1, 3, 4)
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)
@@ -99,6 +101,11 @@ for epoch in range(num_epochs):
 
         optimizer.step()
 
+        classification_running_loss += classification_loss.item()
+        scorer_running_loss += final_score_loss.item()
+        print(f"average loss per mini batch of classification loss:  {classification_running_loss / 16:.3f}")
+        print(f"average loss per mini batch of scorer loss: {scorer_running_loss / 16:.3f}")
+
         data_load_time = data_load_end_time - data_load_start_time
         step_time = time.time() - data_load_end_time
         if ((step + 1) % log_frequency) == 0:
@@ -110,6 +117,5 @@ for epoch in range(num_epochs):
 
         step += 1
 
-    #print(f'Epoch {epoch + 1}/{num_epochs}, classification loss: {classification_loss.item()}, final score loss: {final_score_loss.item()}')
 
 summary_writer.close()
