@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=AQA
 #SBATCH --partition=gpu
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #SBATCH -o ./log_%j.out # STDOUT out
 #SBATCH -e ./log_%j.err # STDERR out
 #SBATCH --account=COMS030144

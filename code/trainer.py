@@ -51,8 +51,10 @@ print_frequency = 20
 classifier = ClassifierCNN3D()
 
 labels_path = "../labels/train_labels/train_labels.json"
-sample_vids = "../../dissData/train_vids"
+print("made it past labels")
+sample_vids = "../../../dissData/train_vids"
 video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(256, 256), num_frames=16)
+print("smh loaded the data???")
 
 cnnLayer = C3DC()
 fc = FullyConnected()

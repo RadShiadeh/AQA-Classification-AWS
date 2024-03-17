@@ -23,7 +23,6 @@ class VideoDataset(Dataset):
         video_path = os.path.join(self.root_dir, f"{video_id}.mp4")
 
         frames = self.read_video_frames(video_path)
-
         frames_resized = [transforms.functional.resize(Image.fromarray(frame), self.resize_shape) for frame in frames]
 
         frames_tensor = torch.stack([transforms.functional.to_tensor(frame) for frame in frames_resized])
@@ -37,6 +36,7 @@ class VideoDataset(Dataset):
 
         classification_label_tensor = torch.tensor(classification_label, dtype=torch.float32).view(1)
         score_label_tensor = torch.tensor(score_label, dtype=torch.float32).view(1)
+        print(f"sample vid: [id, classification, score] = {[video_id, classification_label_tensor, score_label_tensor]}")
 
         return frames_tensor, classification_label_tensor, score_label_tensor
 
@@ -46,6 +46,7 @@ class VideoDataset(Dataset):
         return labels
 
     def read_video_frames(self, video_path):
+        print("reading frames")
         cap = cv2.VideoCapture(video_path)
         frames = []
         while True:
@@ -55,4 +56,5 @@ class VideoDataset(Dataset):
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frames.append(frame)
         cap.release()
+        print("got the frames and released the cap")
         return frames
