@@ -50,11 +50,9 @@ print_frequency = 20
 
 classifier = ClassifierCNN3D()
 
-labels_path = "../labels/train_labels/train_labels.json"
-print("made it past labels")
-sample_vids = "../../../dissData/train_vids"
-video_dataset = VideoDataset(sample_vids, labels_path, transform=None, resize_shape=(256, 256), num_frames=16)
-print("smh loaded the data???")
+labels_path = "../labels/train_labels/train.pkl"
+sample_vids = "../../dissData/video_npy/train"
+video_dataset = VideoDataset(sample_vids, labels_path, transform=None, num_frames=16)
 
 cnnLayer = C3DC()
 fc = FullyConnected()
@@ -64,7 +62,7 @@ fc = fc.to(device)
 score_reg = score_reg.to(device)
 cnnLayer = cnnLayer.to(device)
 
-batch_size = 1
+batch_size = 16
 
 data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 
@@ -80,7 +78,7 @@ optimizer = optim.AdamW(all_params, lr=0.0001)
 
 summary_writer = SummaryWriter()
 
-num_epochs = 5
+num_epochs = 50
 print("loaded all models, going into training loop")
 for epoch in range(num_epochs):
     print('-------------------------------------------------------------------------------------------------------')
@@ -89,7 +87,7 @@ for epoch in range(num_epochs):
     scorer_running_loss = 0.0
     for _, batch_data in enumerate(data_loader):
         frames = batch_data[0].type(torch.FloatTensor).to(device)
-        frames = frames.permute(0, 2, 1, 3, 4)
+        frames = frames.permute(0, 4, 1, 2, 3)
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)
         score_labels = batch_data[2].type(torch.FloatTensor).to(device)
 
@@ -128,6 +126,7 @@ for epoch in range(num_epochs):
             print_metrics(epoch+1, final_score_loss, data_load_time, step_time, "scorer")
 
         step += 1
+        import sys; sys.exit(0)
 
     if (epoch + 1) % 10 == 0:
         torch.save(eteModel.state_dict(), 'ETE_model.pth')
