@@ -8,7 +8,7 @@ from model import C3DC, FullyConnected, ScoreRegressor, EndToEndModel, Classifie
 from dataLoader import VideoDataset
 
 step = 0
-log_frequency = 2
+log_frequency = 5
 
 def print_metrics(epoch, loss, data_load_time, step_time, loss_type):
         epoch_step = step % len(video_dataset)
@@ -43,7 +43,7 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-print_frequency = 2
+print_frequency = 20
 
 classifier = ClassifierCNN3D()
 
@@ -56,7 +56,7 @@ fc = FullyConnected()
 score_reg = ScoreRegressor()
 fc = fc.to(device)
 score_reg = score_reg.to(device)
-batch_size = 10
+batch_size = 16
 
 data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 
@@ -72,14 +72,12 @@ optimizer = optim.AdamW(all_params, lr=0.0001)
 
 summary_writer = SummaryWriter()
 
-num_epochs = 5
+num_epochs = 50
 for epoch in range(num_epochs):
     print('-------------------------------------------------------------------------------------------------------')
+    eteModel.train()
+    data_load_start_time = time.time()
     for i, batch_data in enumerate(data_loader):
-        data_load_start_time = time.time()
-
-        eteModel.train()
-
         frames = batch_data[0].type(torch.FloatTensor).to(device)
         frames = frames.permute(0, 2, 1, 3, 4)
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)
