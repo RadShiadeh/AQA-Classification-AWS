@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 import pickle
 
 class VideoDataset(Dataset):
-    def __init__(self, root_dir, labels_file, transform=None, num_frames=128):
+    def __init__(self, root_dir, labels_file, transform=None, num_frames=16):
         self.root_dir = root_dir
         self.labels = self.load_labels(labels_file)
         self.video_ids = list(self.labels.keys())
