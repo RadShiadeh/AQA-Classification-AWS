@@ -126,7 +126,6 @@ for epoch in range(num_epochs):
             print_metrics(epoch+1, final_score_loss, data_load_time, step_time, "scorer")
 
         step += 1
-        import sys; sys.exit(0)
 
     if (epoch + 1) % 10 == 0:
         torch.save(eteModel.state_dict(), 'ETE_model.pth')
