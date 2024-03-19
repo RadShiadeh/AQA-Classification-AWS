@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from model import C3DC, FullyConnected, ScoreRegressor, EndToEndModel, ClassifierCNN3D
-from dataLoader import VideoDataset
+from dataloader_npy import VideoDataset
 
 print("starting")
 
@@ -62,7 +62,7 @@ print_frequency = 20
 classifier = ClassifierCNN3D()
 
 labels_path = "../labels/train_labels/train.pkl"
-sample_vids = "./train"
+sample_vids = "../../dissData/video_npy/train"
 video_dataset = VideoDataset(sample_vids, labels_path, transform=None, num_frames=16)
 
 cnnLayer = C3DC()
@@ -102,8 +102,6 @@ for epoch in range(num_epochs):
     correct_score_predictions = 0
     threshold = 0.5
     for _, batch_data in enumerate(data_loader):
-        if epoch == 1:
-            break
         frames = batch_data[0].type(torch.FloatTensor).to(device)
         frames = frames.permute(0, 4, 1, 2, 3)
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)

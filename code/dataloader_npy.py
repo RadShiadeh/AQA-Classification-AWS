@@ -1,10 +1,11 @@
 import os
+import pickle
 import torch
 from torch.utils.data import Dataset
-import pickle
+import numpy as np
 
 class VideoDataset(Dataset):
-    def __init__(self, root_dir, labels_file, transform=None, num_frames=128):
+    def __init__(self, root_dir, labels_file, transform=None, num_frames=16):
         self.root_dir = root_dir
         self.labels = self.load_labels(labels_file)
         self.video_ids = list(self.labels.keys())
@@ -16,13 +17,9 @@ class VideoDataset(Dataset):
 
     def __getitem__(self, idx):
         video_id = self.video_ids[idx]
-        video_path = os.path.join(self.root_dir, f"{video_id}.pkl")
+        video_path = os.path.join(self.root_dir, f"{video_id}.npy")
 
-        # Load frames from pickle file
-        with open(video_path, 'rb') as file:
-            frames_array = pickle.load(file)
-
-        frames_tensor = torch.from_numpy(frames_array)
+        frames_tensor = torch.from_numpy(np.load(video_path))
 
         # Ensure consistent number of frames
         if len(frames_tensor) < self.num_frames:

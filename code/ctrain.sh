@@ -10,13 +10,8 @@
 #SBATCH --account=COMS030144
 #SBATCH --mem=20gb
 
-echo start time is "$(date)"
-echo Slurm job ID is "${SLURM_JOBID}"
-
+echo I did get executed
 module load "languages/anaconda3/2021-3.8.8-cuda-11.1-pytorch"
-
+echo loaded modules
 # run your Python script
-python -u trainer.py
-
-echo end time is "$(date)"
-hostname
+python classifier_trainer.py
