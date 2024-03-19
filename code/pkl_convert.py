@@ -3,8 +3,9 @@ import numpy as np
 import os
 import json
 from tester import *
+import pickle
 
-def convert_video_to_npy(video_file, output_folder, num_frames=128, resize_shape=(256, 256)):
+def convert_video_to_pkl(video_file, output_folder, num_frames=128, resize_shape=(256, 256)):
     cap = cv2.VideoCapture(video_file)
 
     if not os.path.exists(output_folder):
@@ -28,7 +29,10 @@ def convert_video_to_npy(video_file, output_folder, num_frames=128, resize_shape
         frames.append(np.zeros_like(frames[0]))
 
     frames_array = np.array(frames)
-    np.save(os.path.join(output_folder, f"{filename_without_extension}.npy"), frames_array)
+
+    # Save as pickle
+    with open(os.path.join(output_folder, f"{filename_without_extension}.pkl"), 'wb') as f:
+        pickle.dump(frames_array, f)
 
     cap.release()
 
@@ -38,7 +42,7 @@ def make_npy(vids_path, out_folder_path, labels_path):
 
     for video_id, _ in labels.items():
         video_path = os.path.join(vids_path, f"{video_id}.mp4")
-        convert_video_to_npy(video_path, out_folder_path)
+        convert_video_to_pkl(video_path, out_folder_path)
 
 def main():
     train_vids = "../../dissData/train_vids"
