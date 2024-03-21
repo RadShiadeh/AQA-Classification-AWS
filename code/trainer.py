@@ -50,15 +50,15 @@ batch_size = 16
 
 train_labels_path = "../labels/train_labels/train.pkl"
 train_vids = "../../dissData/video_npy/train"
-video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=64)
+video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=32)
 
 labels_valid = "../labels/valid_labels/valid.pkl"
 valid_vids = "../../dissData/video_npy/valid"
-video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=64)
+video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=32)
 
 labels_test = "../labels/valid_labels/valid.pkl"
 test_vids = "../../dissData/video_npy/valid"
-video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=64)
+video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=32)
 
 train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 validation_data = DataLoader(video_dataset_valid, batch_size)
@@ -149,12 +149,12 @@ for epoch in range(num_epochs):
             log_metrics(epoch, final_score_loss, data_load_time, step_time)
 
         step += 1
-        
+
     if ((epoch + 1) % print_frequency) == 0:
         print_metrics(epoch=epoch+1, loss=classification_loss, accuracy=accuracy_class, data_load_time=data_load_time, step_time=step_time, type="classification")
         print_metrics(epoch=epoch+1, loss=final_score_loss, accuracy=accuracy_score, data_load_time=data_load_time, step_time=step_time, type="scorer")
 
-    if (epoch + 1) % 10 == 0:
+    if (epoch + 1) % 5 == 0:
         torch.save(eteModel.state_dict(), 'ETE_model.pth')
     
 
