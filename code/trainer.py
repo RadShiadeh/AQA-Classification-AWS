@@ -45,20 +45,20 @@ else:
 step = 0
 log_frequency = 5
 running_loss_print_freq = 50
-print_frequency = 50
+print_frequency = 1 #print after each epoch
 batch_size = 16
 
 train_labels_path = "../labels/train_labels/train.pkl"
 train_vids = "../../dissData/video_npy/train"
-video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=16)
+video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=64)
 
 labels_valid = "../labels/valid_labels/valid.pkl"
 valid_vids = "../../dissData/video_npy/valid"
-video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=16)
+video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=64)
 
 labels_test = "../labels/valid_labels/valid.pkl"
 test_vids = "../../dissData/video_npy/valid"
-video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=16)
+video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=64)
 
 train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 validation_data = DataLoader(video_dataset_valid, batch_size)
@@ -141,20 +141,18 @@ for epoch in range(num_epochs):
         data_load_time = data_load_end_time - data_load_start_time
         step_time = time.time() - data_load_end_time
         
-        # Compute accuracy
         accuracy_class = correct_predictions_class / total_samples
         accuracy_score = correct_score_predictions / total_samples_score
 
         if ((step + 1) % log_frequency) == 0:
             log_metrics(epoch, classification_loss, data_load_time, step_time)
             log_metrics(epoch, final_score_loss, data_load_time, step_time)
-        if ((step + 1) % print_frequency) == 0:
-            print_metrics(epoch=epoch+1, loss=classification_loss, accuracy=accuracy_class, data_load_time=data_load_time, step_time=step_time, type="classification")
-            print_metrics(epoch=epoch+1, loss=final_score_loss, accuracy=accuracy_score, data_load_time=data_load_time, step_time=step_time, type="scorer")
+
         step += 1
-    
-    #import sys; sys.exit()
-    
+        
+    if ((epoch + 1) % print_frequency) == 0:
+        print_metrics(epoch=epoch+1, loss=classification_loss, accuracy=accuracy_class, data_load_time=data_load_time, step_time=step_time, type="classification")
+        print_metrics(epoch=epoch+1, loss=final_score_loss, accuracy=accuracy_score, data_load_time=data_load_time, step_time=step_time, type="scorer")
 
     if (epoch + 1) % 10 == 0:
         torch.save(eteModel.state_dict(), 'ETE_model.pth')

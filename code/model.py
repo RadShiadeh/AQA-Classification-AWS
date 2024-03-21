@@ -5,7 +5,7 @@ import torchvision.models as models
 
 
 class ClassifierCNN3D(nn.Module):
-    def __init__(self, t_dim=16, img_x=256, img_y=256, fc_hidden=256, num_classes=2):
+    def __init__(self, t_dim=64, img_x=256, img_y=256, fc_hidden=256, num_classes=2):
         super(ClassifierCNN3D, self).__init__()
 
         self.t_dim = t_dim
@@ -105,15 +105,15 @@ class C3DC(nn.Module):
         h = self.relu(self.conv5b(h))
         h = self.pool5(h)
 
-        # Adjust the spatial dimensions accordingly
         h = h.reshape(h.size(0), -1)
+
         return h
 
 
 class FullyConnected(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.fc1 = nn.Linear(8192, 4096)
+        self.fc1 = nn.Linear(32768, 4096)
         self.relu = nn.ReLU()
 
     def forward(self, x):
