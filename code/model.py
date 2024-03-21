@@ -14,36 +14,50 @@ class ClassifierCNN3D(nn.Module):
         self.fc_hidden = fc_hidden
         self.num_classes = num_classes
         self.ch = 3
-        self.kernel = (3, 3, 3)
-        self.stride = (2, 2, 2)
+        self.kernel = (2, 2, 2)
+        self.stride = (2, 2, 2)  # Adjusted stride for desired output shape
         self.padd = (0, 0, 0)
 
-        self.conv1_out = self.conv3D_output_size((self.t_dim, self.img_x, self.img_y), self.padd, self.kernel, self.stride)
+        self.conv1_out = self.conv3D_output_size((self.t_dim, self.img_x, self.img_y), self.padd, (2, 2, 2), (2, 2, 2))
         self.conv2_out = self.conv3D_output_size(self.conv1_out, self.padd, self.kernel, self.stride)
+        self.conv3_out = self.conv3D_output_size(self.conv2_out, self.padd, self.kernel, self.stride)
+        self.conv4_out = self.conv3D_output_size(self.conv3_out, self.padd, self.kernel, self.stride)
 
-        self.conv1 = nn.Conv3d(in_channels=self.ch, out_channels=self.ch, kernel_size=self.kernel, stride=self.stride, padding=self.padd)
-        self.bn = nn.BatchNorm3d(self.ch)
-
+        self.conv1 = nn.Conv3d(in_channels=self.ch, out_channels=self.ch, kernel_size=(2, 2, 2), stride=(2, 2, 2), padding=(0, 0, 0))
+        self.bn1 = nn.BatchNorm3d(self.ch)
         self.conv2 = nn.Conv3d(in_channels=self.ch, out_channels=self.ch, kernel_size=self.kernel, stride=self.stride, padding=self.padd)
+        self.bn2 = nn.BatchNorm3d(self.ch)
+        self.conv3 = nn.Conv3d(in_channels=self.ch, out_channels=self.ch, kernel_size=self.kernel, stride=self.stride, padding=self.padd)
+        self.bn3 = nn.BatchNorm3d(self.ch)
+        self.conv4 = nn.Conv3d(in_channels=self.ch, out_channels=self.ch, kernel_size=self.kernel, stride=self.stride, padding=self.padd)
+        self.bn4 = nn.BatchNorm3d(self.ch)
+
         self.relu = nn.ReLU(inplace=True)
-        self.pool = nn.MaxPool3d(2)
-        self.fc1 = nn.Linear(self.ch * self.conv2_out[0] * self.conv2_out[1] * self.conv2_out[2], self.fc_hidden)
+
+        self.fc1 = nn.Linear(self.ch * self.conv4_out[0] * self.conv4_out[1] * self.conv4_out[2], self.fc_hidden)
         self.fc2 = nn.Linear(self.fc_hidden, 1)
-    
-    
+
     def forward(self, x):
         x = self.conv1(x)
-        x = self.bn(x)
+        x = self.bn1(x)
         x = self.relu(x)
 
         x = self.conv2(x)
-        x = self.bn(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+
+        x = self.conv3(x)
+        x = self.bn3(x)
+        x = self.relu(x)
+
+        x = self.conv4(x)
+        x = self.bn4(x)
         x = self.relu(x)
 
         x = x.reshape(x.size(0), -1)
         x = F.relu(self.fc1(x))
         x = torch.sigmoid(F.relu(self.fc2(x)))
-
+        
         return x
     
     @staticmethod

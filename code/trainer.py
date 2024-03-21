@@ -122,7 +122,7 @@ for epoch in range(num_epochs):
     total_samples_score = 0
     correct_score_predictions = 0
     eteModel.train()
-    for _, batch_data in enumerate(train_data_loader):
+    for _, batch_data in enumerate(validation_data):
         frames = batch_data[0].type(torch.FloatTensor).to(device)
         frames = frames.permute(0, 4, 1, 2, 3)
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)
