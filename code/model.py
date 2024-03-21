@@ -32,15 +32,19 @@ class ClassifierCNN3D(nn.Module):
     
     
     def forward(self, x):
+        print(x.shape, "e")
         x = self.conv1(x)
         x = self.bn(x)
         x = self.relu(x)
+        print(x.shape, "conv1")
 
         x = self.conv2(x)
         x = self.bn(x)
         x = self.relu(x)
+        print(x.shape, "conv2")
 
         x = x.reshape(x.size(0), -1)
+        print(x.shape, "reshape")
         x = F.relu(self.fc1(x))
         x = torch.sigmoid(F.relu(self.fc2(x)))
 

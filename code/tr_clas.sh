@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH --job-name=ETE_AQA
+#SBATCH --job-name=classification
 #SBATCH --nodes 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task=4
@@ -16,7 +16,7 @@ echo Slurm job ID is "${SLURM_JOBID}"
 module load "languages/anaconda3/2021-3.8.8-cuda-11.1-pytorch"
 
 # run your Python script
-python -u trainer.py
+python -u classifier_trainer.py
 
 echo end time is "$(date)"
 hostname
