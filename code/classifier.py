@@ -50,15 +50,15 @@ batch_size = 16
 
 train_labels_path = "../labels/train_labels/train.pkl"
 train_vids = "../../dissData/video_npy/train"
-video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=32)
+video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=16)
 
 labels_valid = "../labels/valid_labels/valid.pkl"
 valid_vids = "../../dissData/video_npy/valid"
-video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=32)
+video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=16)
 
 labels_test = "../labels/valid_labels/valid.pkl"
 test_vids = "../../dissData/video_npy/valid"
-video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=32)
+video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=16)
 
 train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 validation_data = DataLoader(video_dataset_valid, batch_size)

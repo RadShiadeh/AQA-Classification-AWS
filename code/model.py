@@ -5,7 +5,7 @@ import torchvision.models as models
 
 
 class ClassifierCNN3D(nn.Module):
-    def __init__(self, t_dim=32, img_x=256, img_y=256, fc_hidden=256, num_classes=2):
+    def __init__(self, t_dim=16, img_x=256, img_y=256, fc_hidden=256, num_classes=2):
         super(ClassifierCNN3D, self).__init__()
 
         self.t_dim = t_dim
@@ -32,19 +32,15 @@ class ClassifierCNN3D(nn.Module):
     
     
     def forward(self, x):
-        print(x.shape, "e")
         x = self.conv1(x)
         x = self.bn(x)
         x = self.relu(x)
-        print(x.shape, "conv1")
 
         x = self.conv2(x)
         x = self.bn(x)
         x = self.relu(x)
-        print(x.shape, "conv2")
 
         x = x.reshape(x.size(0), -1)
-        print(x.shape, "reshape")
         x = F.relu(self.fc1(x))
         x = torch.sigmoid(F.relu(self.fc2(x)))
 
@@ -117,7 +113,7 @@ class C3DC(nn.Module):
 class FullyConnected(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.fc1 = nn.Linear(16384, 4096)
+        self.fc1 = nn.Linear(8192, 4096)
         self.relu = nn.ReLU()
 
     def forward(self, x):

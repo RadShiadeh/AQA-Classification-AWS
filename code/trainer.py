@@ -6,8 +6,33 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from model import C3DC, FullyConnected, ScoreRegressor, EndToEndModel, ClassifierCNN3D
 from dataloader_npy import VideoDataset
+import numpy as np
+from scipy.stats import spearmanr
 
-def print_metrics(epoch, loss, data_load_time, step_time, accuracy, type):
+
+def evaluate_model(model, test_data_loader):
+    model.eval()
+    predicted_scores = []
+    true_scores = []
+
+    with torch.no_grad():
+        for batch_data in test_data_loader:
+            frames = batch_data[0].type(torch.FloatTensor).to(device)
+            frames = frames.permute(0, 4, 1, 2, 3)
+            score_labels = batch_data[2].type(torch.FloatTensor).to(device)
+
+            outputs = model(frames)
+            final_score_output = outputs['final_score']
+
+            predicted_scores.extend(final_score_output.cpu().numpy())
+            true_scores.extend(score_labels.cpu().numpy())
+
+    predicted_scores = np.array(predicted_scores)
+    true_scores = np.array(true_scores)
+
+    return predicted_scores, true_scores
+
+def print_metrics(epoch, loss, accuracy, type):
         epoch_step = step % len(video_dataset)
         print(
                 f"epoch: [{epoch}], "
@@ -15,8 +40,6 @@ def print_metrics(epoch, loss, data_load_time, step_time, accuracy, type):
                 f"batch loss: {loss:.5f}, "
                 f"accuracy: {accuracy}, "
                 f"data load time: "
-                f"{data_load_time:.5f}, "
-                f"step time: {step_time:.5f}",
                 f"model type: {type}"
         )
 
@@ -47,18 +70,19 @@ log_frequency = 5
 running_loss_print_freq = 50
 print_frequency = 1 #print after each epoch
 batch_size = 16
+eval_freq = 1
 
 train_labels_path = "../labels/train_labels/train.pkl"
 train_vids = "../../dissData/video_npy/train"
-video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=32)
+video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=16)
 
 labels_valid = "../labels/valid_labels/valid.pkl"
 valid_vids = "../../dissData/video_npy/valid"
-video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=32)
+video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=16)
 
 labels_test = "../labels/valid_labels/valid.pkl"
 test_vids = "../../dissData/video_npy/valid"
-video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=32)
+video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=16)
 
 train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 validation_data = DataLoader(video_dataset_valid, batch_size)
@@ -97,7 +121,6 @@ for epoch in range(num_epochs):
     correct_predictions_class = 0
     total_samples_score = 0
     correct_score_predictions = 0
-    threshold = 0.5
     eteModel.train()
     for _, batch_data in enumerate(train_data_loader):
         frames = batch_data[0].type(torch.FloatTensor).to(device)
@@ -129,10 +152,6 @@ for epoch in range(num_epochs):
         correct_predictions_class += (predicted == classification_labels).sum().item()
         total_samples += classification_labels.size(0)
 
-        predicted_score_labels = (final_score_output > threshold).float()
-        correct_score_predictions += (predicted_score_labels == score_labels).sum().item()
-        total_samples_score += score_labels.size(0)
-
 
         if ((step+1) % running_loss_print_freq) == 0:
             print(f"average running loss per mini batch of classification loss: {classification_running_loss / batch_size:.3f} at [epoch, step]: {[epoch+1, step+1]}")
@@ -142,7 +161,6 @@ for epoch in range(num_epochs):
         step_time = time.time() - data_load_end_time
         
         accuracy_class = correct_predictions_class / total_samples
-        accuracy_score = correct_score_predictions / total_samples_score
 
         if ((step + 1) % log_frequency) == 0:
             log_metrics(epoch, classification_loss, data_load_time, step_time)
@@ -150,9 +168,13 @@ for epoch in range(num_epochs):
 
         step += 1
 
+    if ((epoch + 1) % eval_freq) == 0:
+        pred_score, true_score = evaluate_model(eteModel, test_data_loader)
+        correlation_coeff, _ = spearmanr(pred_score, true_score)
+
     if ((epoch + 1) % print_frequency) == 0:
-        print_metrics(epoch=epoch+1, loss=classification_loss, accuracy=accuracy_class, data_load_time=data_load_time, step_time=step_time, type="classification")
-        print_metrics(epoch=epoch+1, loss=final_score_loss, accuracy=accuracy_score, data_load_time=data_load_time, step_time=step_time, type="scorer")
+        print_metrics(epoch=epoch+1, loss=classification_loss, accuracy=accuracy_class, type="classification")
+        print_metrics(epoch=epoch+1, loss=final_score_loss, accuracy=correlation_coeff, type="scorer spearmanr correlation")
 
     if (epoch + 1) % 5 == 0:
         torch.save(eteModel.state_dict(), 'ETE_model.pth')
