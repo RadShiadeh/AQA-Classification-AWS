@@ -105,8 +105,12 @@ eteModel = eteModel.to(device)
 criterion_classification = nn.BCELoss()
 criterion_scorer = nn.CrossEntropyLoss()
 
-all_params = (list(fc.parameters()) + list(cnnLayer.parameters()) + list(score_reg.parameters()) + list(classifier.parameters()))
-optimizer = optim.AdamW(all_params, lr=0.0001)
+
+optimizer_classifier = optim.AdamW(classifier.parameters(), lr=0.0005)
+optim_cnn = optim.AdamW(cnnLayer.parameters(), lr=0.0005)
+optim_scor_reg = optim.AdamW(score_reg.parameters(), lr=0.0005)
+optim_fc = optim.AdamW(fc.parameters(), lr=0.0005)
+
 
 summary_writer = SummaryWriter()
 
@@ -129,8 +133,6 @@ for epoch in range(num_epochs):
         score_labels = batch_data[2].type(torch.FloatTensor).to(device)
 
         data_load_end_time = time.time()
-        
-        optimizer.zero_grad()
             
         outputs = eteModel(frames)
         classification_output = outputs['classification']
@@ -142,7 +144,15 @@ for epoch in range(num_epochs):
         classification_loss.backward()
         final_score_loss.backward()
 
-        optimizer.step()
+        optimizer_classifier.step()
+        optim_cnn.step()
+        optim_fc.step()
+        optim_scor_reg.step()
+        
+        optimizer_classifier.zero_grad()
+        optim_cnn.zero_grad()
+        optim_scor_reg.zero_grad()
+        optim_fc.zero_grad()
 
         classification_running_loss += classification_loss.item()
         scorer_running_loss += final_score_loss.item()
