@@ -8,7 +8,6 @@ from model import C3DC, FullyConnected, ScoreRegressor, ClassifierCNN3D, EndToEn
 from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
-import os
 
 
 def evaluate_model(classifier_, cnn_, fully_connected_, scorer_, ete, data_loader):
@@ -140,7 +139,7 @@ for epoch in range(num_epochs):
     fc.train()
     eteModel.train()
 
-    for _, batch_data in enumerate(test_data_loader):
+    for _, batch_data in enumerate(train_data_loader):
         frames = batch_data[0].type(torch.FloatTensor).to(device)
         frames = frames.permute(0, 4, 1, 2, 3)
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)
@@ -175,10 +174,6 @@ for epoch in range(num_epochs):
                 correct_predictions_class += 1
 
         total_samples += classification_labels.size(0)
-
-        if ((step+1) % running_loss_print_freq) == 0:
-            print(f"average running loss per mini batch of classification loss: {classification_running_loss / batch_size:.3f} at [epoch, step]: {[epoch+1, step+1]}")
-            print(f"average running loss per mini batch of scorer loss: {scorer_running_loss / batch_size:.3f} at [epoch, step]: {[epoch+1, step+1]}")
 
         data_load_time = data_load_end_time - data_load_start_time
         step_time = time.time() - data_load_end_time
