@@ -176,14 +176,26 @@ class FeatureExtractionRes3D(nn.Module):
 
 #sample final look of endto end not sure if iys right
 class EndToEndModel(nn.Module):
-    def __init__(self, classifier, final_score_regressor):
+    def __init__(self, classifier, cnn, fully_connected, final_score_regressor):
         super(EndToEndModel, self).__init__()
         self.classifier = classifier
         self.final_score_regressor = final_score_regressor
+        self.cnn = cnn
+        self.fully_connected = fully_connected
 
-    def forward(self, class_x, score_x):
-        classification_output = self.classifier(class_x)
-        final_score = self.final_score_regressor(score_x)
+    def forward(self, x):
+        classification_output = self.classifier(x)
+
+        features = []
+        for frame in x:
+            feature_out = self.cnn(frame)
+            features.append(feature_out)
+
+        features = torch.stack(features, dim=0)
+        features = features.flatten(start_dim=1, end_dim=2)
+
+        fc_out = self.fully_connected(features)
+        final_score = self.final_score_regressor(fc_out)
 
         return {
             'classification': classification_output,
