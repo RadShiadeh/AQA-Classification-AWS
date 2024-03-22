@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import torchvision.models as models
+import numpy as np
 
 
 class ClassifierCNN3D(nn.Module):
@@ -175,21 +176,16 @@ class FeatureExtractionRes3D(nn.Module):
 
 #sample final look of endto end not sure if iys right
 class EndToEndModel(nn.Module):
-    def __init__(self, classifier, cnnLayer, fully_connected, final_score_regressor):
+    def __init__(self, classifier, final_score_regressor):
         super(EndToEndModel, self).__init__()
         self.classifier = classifier
-        self.cnnLayer = cnnLayer
-        self.fully_connected = fully_connected
         self.final_score_regressor = final_score_regressor
 
-    def forward(self, x):
-        classification_output = self.classifier(x)
-
-        cnnLayer_out = self.cnnLayer(x)
-        fully_connected_output = self.fully_connected(cnnLayer_out)
-        final_score = self.final_score_regressor(fully_connected_output)
+    def forward(self, class_x, score_x):
+        classification_output = self.classifier(class_x)
+        final_score = self.final_score_regressor(score_x)
 
         return {
-            'classification': torch.sigmoid(classification_output),  # Apply sigmoid activation
+            'classification': classification_output,
             'final_score': final_score
         }
