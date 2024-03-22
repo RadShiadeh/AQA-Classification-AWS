@@ -21,7 +21,17 @@ def evaluate_model(model, data_loader):
             frames = frames.permute(0, 4, 1, 2, 3)
             score_labels = batch_data[2].type(torch.FloatTensor).to(device)
 
-            outputs = model(frames)
+            features = []
+            for frame in frames:
+                feature_out = cnnLayer(frame)
+                features.append(feature_out)
+
+            features = torch.stack(features, dim=0)
+            features = features.flatten(start_dim=1, end_dim=2)
+
+            fc_out = fc(features)
+
+            outputs = eteModel(frames, fc_out)
             final_score_output = outputs['final_score']
 
             predicted_scores.extend(final_score_output.cpu().numpy())
@@ -128,7 +138,7 @@ for epoch in range(num_epochs):
     correct_score_predictions = 0
     eteModel.train()
 
-    for _, batch_data in enumerate(validation_data):
+    for _, batch_data in enumerate(train_data_loader):
         frames = batch_data[0].type(torch.FloatTensor).to(device)
         frames = frames.permute(0, 4, 1, 2, 3)
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)
@@ -151,11 +161,14 @@ for epoch in range(num_epochs):
         outputs = eteModel(frames, fc_out)
         classification_output = outputs['classification']
         final_score_output = outputs['final_score']
-        print(final_score_output.shape)
-        import sys;sys.exit()
 
         classification_loss = criterion_classification(classification_output, classification_labels.float().view(-1, 1))
         final_score_loss = criterion_scorer(final_score_output, score_labels.float())
+
+        optimizer_classifier.zero_grad()
+        optim_cnn.zero_grad()
+        optim_scor_reg.zero_grad()
+        optim_fc.zero_grad()
 
         classification_loss.backward()
         final_score_loss.backward()
@@ -164,11 +177,6 @@ for epoch in range(num_epochs):
         optim_cnn.step()
         optim_fc.step()
         optim_scor_reg.step()
-
-        optimizer_classifier.zero_grad()
-        optim_cnn.zero_grad()
-        optim_scor_reg.zero_grad()
-        optim_fc.zero_grad()
 
         classification_running_loss += classification_loss.item()
         scorer_running_loss += final_score_loss.item()
