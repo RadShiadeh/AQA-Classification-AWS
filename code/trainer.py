@@ -42,10 +42,14 @@ def evaluate_scorer(classifier_, cnn_, fully_connected_, scorer_, ete, data_load
 
     return predicted_scores, true_scores
 
-def get_accuracy_classification(model, test_data):
+def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, test_data):
     correct = 0
     total = 0
-    model.eval()
+    ete.eval()
+    cnn.eval()
+    classifier.eval()
+    scorer.eval()
+    fully_connected.eval()
 
     with torch.no_grad():
         for data in test_data:
@@ -53,13 +57,18 @@ def get_accuracy_classification(model, test_data):
             frames = frames.permute(0, 4, 1, 2, 3)
             classification_labels = data[1].type(torch.FloatTensor).to(device)
 
-            outputs = model(frames)
+            outputs = ete(frames)
 
             _, pred = torch.max(outputs['classification'], 1)
             total += classification_labels.size(0)
             correct += (pred == classification_labels).sum().item()
         
-        accuracy = correct / total * 100
+    accuracy = correct / total * 100
+    ete.train()
+    cnn.train()
+    classifier.train()
+    scorer.train()
+    fully_connected.train()
     
     return accuracy
 
@@ -180,6 +189,11 @@ for epoch in range(num_epochs):
         loss += classification_loss
 
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(eteModel.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(classifier.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(fc.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(cnnLayer.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(score_reg.parameters(), max_norm=1.0)
         optimizer.step()
 
         classification_running_loss += classification_loss.item()
@@ -199,9 +213,9 @@ for epoch in range(num_epochs):
     epoch_time = epoch_end_time - epoch_start_time
 
     if ((epoch + 1) % eval_freq) == 0:
-        pred_score, true_score = evaluate_scorer(classifier,cnnLayer, fc, score_reg, eteModel, test_data_loader)
+        pred_score, true_score = evaluate_scorer(classifier,cnnLayer, fc, score_reg, eteModel, validation_data)
         correlation_coeff, _ = spearmanr(pred_score, true_score)
-        accuracy_class = get_accuracy_classification(eteModel, test_data_loader)
+        accuracy_class = get_accuracy_classification(eteModel, cnnLayer, classifier, score_reg, fc, validation_data)
     
     avg_classification_loss = classification_running_loss / len(train_data_loader)
     avg_scorer_loss = scorer_running_loss / len(train_data_loader)
