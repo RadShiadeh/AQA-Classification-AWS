@@ -138,7 +138,7 @@ criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
 optim_params = (list(fc.parameters()) + list(score_reg.parameters()) + list(classifier.parameters()) + list(cnnLayer.parameters()))
-optimizer = optim.AdamW(optim_params, lr=0.00005)
+optimizer = optim.Adam(optim_params, lr=0.001)
 
 
 summary_writer = SummaryWriter()
@@ -209,6 +209,7 @@ for epoch in range(num_epochs):
     if ((epoch + 1) % print_frequency) == 0:
         print_metrics(epoch=epoch+1, loss=avg_classification_loss, accuracy=accuracy_class, type="classification", epoch_end=epoch_time)
         print_metrics(epoch=epoch+1, loss=avg_scorer_loss, accuracy=correlation_coeff, type="scorer spearmanr correlation", epoch_end=epoch_time)
+        print(f"running losses: {classification_running_loss, scorer_running_loss} [class, scorer]")
 
     if (epoch + 1) % 5 == 0:
         torch.save(eteModel.state_dict(), 'ETE_model.pth')
