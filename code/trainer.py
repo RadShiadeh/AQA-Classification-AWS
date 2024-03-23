@@ -10,7 +10,7 @@ import numpy as np
 from scipy.stats import spearmanr
 
 
-def evaluate_model(classifier_, cnn_, fully_connected_, scorer_, ete, data_loader):
+def evaluate_scorer(classifier_, cnn_, fully_connected_, scorer_, ete, data_loader):
     classifier_.eval()
     cnn_.eval()
     fully_connected_.eval()
@@ -42,12 +42,33 @@ def evaluate_model(classifier_, cnn_, fully_connected_, scorer_, ete, data_loade
 
     return predicted_scores, true_scores
 
+def get_accuracy_classification(model, test_data):
+    correct = 0
+    total = 0
+    model.eval()
+
+    with torch.no_grad():
+        for data in test_data:
+            frames = data[0].type(torch.FloatTensor).to(device)
+            frames = frames.permute(0, 4, 1, 2, 3)
+            classification_labels = data[1].type(torch.FloatTensor).to(device)
+
+            outputs = model(frames)
+
+            _, pred = torch.max(outputs['classification'], 1)
+            total += classification_labels.size(0)
+            correct += (pred == classification_labels).sum().item()
+        
+        accuracy = correct / total * 100
+    
+    return accuracy
+
+
+
 
 def print_metrics(epoch, loss, accuracy, type, epoch_end):
-    epoch_step = step % len(train_data_loader)
     print(
         f"epoch: [{epoch}], "
-        f"step: [{epoch_step}/{len(train_data_loader)}], "
         f"batch loss: {loss:.3f}, "
         f"accuracy: {accuracy:.3f}, "
         f"model type: {type}"
@@ -117,7 +138,7 @@ criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
 optim_params = (list(fc.parameters()) + list(score_reg.parameters()) + list(classifier.parameters()) + list(cnnLayer.parameters()))
-optimizer = optim.AdamW(optim_params, lr=0.005)
+optimizer = optim.AdamW(optim_params, lr=0.00005)
 
 
 summary_writer = SummaryWriter()
@@ -129,10 +150,6 @@ for epoch in range(num_epochs):
     data_load_start_time = time.time()
     classification_running_loss = 0.0
     scorer_running_loss = 0.0
-    total_samples = 0
-    correct_predictions_class = 0
-    correct_score_predictions = 0
-    correct_predictions_class = 0
     score_reg.train()
     cnnLayer.train()
     classifier.train()
@@ -148,6 +165,8 @@ for epoch in range(num_epochs):
 
         data_load_end_time = time.time()
 
+        optimizer.zero_grad()
+
         output = eteModel(frames)
 
         classification_output = output['classification']
@@ -160,20 +179,11 @@ for epoch in range(num_epochs):
         loss += final_score_loss
         loss += classification_loss
 
-        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         classification_running_loss += classification_loss.item()
         scorer_running_loss += final_score_loss.item()
-
-        # Compute accuracy
-        predicted = (classification_output > 0.5).float()
-        for i in range(len(predicted)):
-            if predicted[i] == classification_labels[i]:
-                correct_predictions_class += 1
-
-        total_samples += classification_labels.size(0)
 
         data_load_time = data_load_end_time - data_load_start_time
         step_time = time.time() - data_load_end_time
@@ -189,12 +199,12 @@ for epoch in range(num_epochs):
     epoch_time = epoch_end_time - epoch_start_time
 
     if ((epoch + 1) % eval_freq) == 0:
-        pred_score, true_score = evaluate_model(classifier,cnnLayer, fc, score_reg, eteModel, test_data_loader)
+        pred_score, true_score = evaluate_scorer(classifier,cnnLayer, fc, score_reg, eteModel, test_data_loader)
         correlation_coeff, _ = spearmanr(pred_score, true_score)
+        accuracy_class = get_accuracy_classification(eteModel, test_data_loader)
     
     avg_classification_loss = classification_running_loss / len(train_data_loader)
     avg_scorer_loss = scorer_running_loss / len(train_data_loader)
-    accuracy_class = (correct_predictions_class / total_samples) * 100
 
     if ((epoch + 1) % print_frequency) == 0:
         print_metrics(epoch=epoch+1, loss=avg_classification_loss, accuracy=accuracy_class, type="classification", epoch_end=epoch_time)
@@ -202,6 +212,7 @@ for epoch in range(num_epochs):
 
     if (epoch + 1) % 5 == 0:
         torch.save(eteModel.state_dict(), 'ETE_model.pth')
+    
     
 
 summary_writer.close()
