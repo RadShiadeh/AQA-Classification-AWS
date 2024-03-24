@@ -2,7 +2,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import torchvision.models as models
-import numpy as np
 
 
 class ClassifierCNN3D(nn.Module):
