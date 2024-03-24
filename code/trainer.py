@@ -111,6 +111,7 @@ running_loss_print_freq = 50
 print_frequency = 1
 batch_size = 16
 eval_freq = 1
+c3d_pkl_path = "../../dissData/c3d.pickle"
 
 train_labels_path = "../labels/train_labels/train.pkl"
 train_vids = "../../dissData/video_npy/train"
@@ -130,7 +131,14 @@ test_data_loader = DataLoader(video_dataset_test, batch_size)
 
 
 classifier = ClassifierCNN3D()
+
+pre_trained_c3d_dict = torch.load(c3d_pkl_path)
 cnnLayer = C3DC()
+cnn_layer_dict = cnnLayer.state_dict()
+pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in cnn_layer_dict}
+cnn_layer_dict.update(pre_trained_c3d_dict)
+cnnLayer.load_state_dict(cnn_layer_dict)
+
 fc = FullyConnected()
 score_reg = ScoreRegressor()
 eteModel = EndToEndModel(classifier, cnnLayer, fc, score_reg)
@@ -147,7 +155,7 @@ criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
 optim_params = (list(fc.parameters()) + list(score_reg.parameters()) + list(classifier.parameters()) + list(cnnLayer.parameters()))
-optimizer = optim.Adam(optim_params, lr=0.001)
+optimizer = optim.Adam(optim_params, lr=0.0001)
 
 
 summary_writer = SummaryWriter()
@@ -208,7 +216,6 @@ for epoch in range(num_epochs):
 
         step += 1
     
-    
     epoch_end_time = time.time()
     epoch_time = epoch_end_time - epoch_start_time
 
@@ -221,8 +228,8 @@ for epoch in range(num_epochs):
     avg_scorer_loss = scorer_running_loss / len(train_data_loader)
 
     if ((epoch + 1) % print_frequency) == 0:
-        print_metrics(epoch=epoch+1, loss=avg_classification_loss, accuracy=accuracy_class, type="classification", epoch_end=epoch_time)
-        print_metrics(epoch=epoch+1, loss=avg_scorer_loss, accuracy=correlation_coeff, type="scorer spearmanr correlation", epoch_end=epoch_time)
+        print_metrics(epoch=epoch+1, loss=avg_classification_loss, accuracy=accuracy_class, type="classification ", epoch_end=epoch_time)
+        print_metrics(epoch=epoch+1, loss=avg_scorer_loss, accuracy=correlation_coeff, type="scorer spearmanr correlation ", epoch_end=epoch_time)
         print(f"running losses: {classification_running_loss, scorer_running_loss} [class, scorer]")
 
     if (epoch + 1) % 5 == 0:
