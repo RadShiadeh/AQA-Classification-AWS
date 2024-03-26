@@ -139,6 +139,11 @@ pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in cn
 cnn_layer_dict.update(pre_trained_c3d_dict)
 cnnLayer.load_state_dict(cnn_layer_dict)
 
+classifier_dict = classifier.state_dict()
+pretrained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.item() if k in classifier_dict}
+classifier_dict.update(pretrained_c3d_dict)
+classifier.load_state_dict(classifier_dict)
+
 fc = FullyConnected()
 score_reg = ScoreRegressor()
 eteModel = EndToEndModel(classifier, cnnLayer, fc, score_reg)
@@ -155,7 +160,7 @@ criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
 optim_params = (list(fc.parameters()) + list(score_reg.parameters()) + list(classifier.parameters()) + list(cnnLayer.parameters()))
-optimizer = optim.Adam(optim_params, lr=0.0001)
+optimizer = optim.AdamW(optim_params, lr=0.001)
 
 
 summary_writer = SummaryWriter()
