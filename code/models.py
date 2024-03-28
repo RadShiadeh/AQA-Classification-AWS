@@ -145,9 +145,9 @@ class ScoreRegressor(nn.Module):
         x = self.fc1(x)
         return x
 
-class FeatureExtractionC3D(nn.Module):
+class ResNetClassifier(nn.Module):
     def __init__(self, num_classes=2):
-        super(FeatureExtractionC3D, self).__init__()
+        super(ResNetClassifier, self).__init__()
         c3d_model = models.video.r3d_18(pretrained=True)
         self.features = nn.Sequential(*list(c3d_model.children())[:-1])
         self.avgpool = nn.AdaptiveAvgPool3d(1)
@@ -155,20 +155,6 @@ class FeatureExtractionC3D(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = self.avgpool(x)
-        x = x.reshape(x.size(0), -1)
-
-        return x
-
-class FeatureExtractionRes3D(nn.Module):
-    def __init__(self, num_classes = 2):
-        super(FeatureExtractionRes3D, self).__init__()
-        res3d_model = models.video.r3d_18()
-        self.features = nn.Sequential(*list(res3d_model.children())[::-1])
-        self.avgpool1 = nn.AdaptiveAvgPool3d(1)
-    
-    def forward(self, x):
-        x = self.features(x)
-        x = self.avgpool1(x)
         x = x.reshape(x.size(0), -1)
 
         return x
