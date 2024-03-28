@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from models import C3DExtended, FullyConnected, ScoreRegressor, ClassifierCNN3D, EndToEndModel
+from models import C3DExtended, FullyConnected, ScoreRegressor, ClassifierC3D, EndToEndModel
 from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
@@ -130,14 +130,19 @@ validation_data = DataLoader(video_dataset_valid, batch_size)
 test_data_loader = DataLoader(video_dataset_test, batch_size)
 
 
-classifier = ClassifierCNN3D()
+pre_trained_c3d_dict = torch.load(c3d_pkl_path) #load c3d weights
 
-pre_trained_c3d_dict = torch.load(c3d_pkl_path)
 cnnLayer = C3DExtended()
 cnn_layer_dict = cnnLayer.state_dict()
 pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in cnn_layer_dict}
 cnn_layer_dict.update(pre_trained_c3d_dict)
 cnnLayer.load_state_dict(cnn_layer_dict)
+
+classifier = ClassifierC3D()
+classifier_dict = classifier.state_dict()
+pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in classifier_dict}
+classifier_dict.update(pre_trained_c3d_dict)
+classifier.load_state_dict(classifier_dict)
 
 fc = FullyConnected()
 score_reg = ScoreRegressor()

@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import torchvision.models as models
+from torchvision.models.video import R3D_18_Weights
 
 
 class ClassifierCNN3D(nn.Module):
@@ -15,7 +16,7 @@ class ClassifierCNN3D(nn.Module):
         self.num_classes = num_classes
         self.ch = 3
         self.kernel = (2, 2, 2)
-        self.stride = (2, 2, 2)  # Adjusted stride for desired output shape
+        self.stride = (2, 2, 2) 
         self.padd = (0, 0, 0)
 
         self.conv1_out = self.conv3D_output_size((self.t_dim, self.img_x, self.img_y), self.padd, (2, 2, 2), (2, 2, 2))
@@ -39,19 +40,19 @@ class ClassifierCNN3D(nn.Module):
 
     def forward(self, x):
         x = self.conv1(x)
-        #x = self.bn1(x)
+        x = self.bn1(x)
         x = self.relu(x)
 
         x = self.conv2(x)
-        #x = self.bn2(x)
+        x = self.bn2(x)
         x = self.relu(x)
 
         x = self.conv3(x)
-        #x = self.bn3(x)
+        x = self.bn3(x)
         x = self.relu(x)
 
         x = self.conv4(x)
-        #x = self.bn4(x)
+        x = self.bn4(x)
         x = self.relu(x)
 
         x = x.reshape(x.size(0), -1)
@@ -71,9 +72,9 @@ class ClassifierCNN3D(nn.Module):
         return output_size
 
 
-class C3DC(nn.Module):
+class C3DExtended(nn.Module):
     def __init__(self):
-        super(C3DC, self).__init__()
+        super(C3DExtended, self).__init__()
         self.pre_conv = nn.Conv3d(3, 3, kernel_size=(3, 3, 3), padding=(1, 1, 1))
         self.pre_pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
 
@@ -148,8 +149,8 @@ class ScoreRegressor(nn.Module):
 class ResNetClassifier(nn.Module):
     def __init__(self, num_classes=2):
         super(ResNetClassifier, self).__init__()
-        c3d_model = models.video.r3d_18(pretrained=True)
-        self.features = nn.Sequential(*list(c3d_model.children())[:-1])
+        r3d_model = models.video.r3d_18(weights=R3D_18_Weights.DEFAULT)
+        self.features = nn.Sequential(*list(r3d_model.children())[:-1])
         self.avgpool = nn.AdaptiveAvgPool3d(1)
     
     def forward(self, x):
@@ -158,9 +159,71 @@ class ResNetClassifier(nn.Module):
         x = x.reshape(x.size(0), -1)
 
         return x
+
+
+class ClassifierC3D(nn.Module):
+    def __init__(self):
+        super(ClassifierC3D, self).__init__()
+
+        self.conv1 = nn.Conv3d(3, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+
+        self.conv2 = nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool2 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv3a = nn.Conv3d(128, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv3b = nn.Conv3d(256, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool3 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv4a = nn.Conv3d(256, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv4b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool4 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv5a = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv5b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool5 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2), padding=(0, 1, 1))
+
+        self.fc6 = nn.Linear(8192, 4096)
+        self.fc7 = nn.Linear(4096, 4096)
+        self.fc8 = nn.Linear(4096, 2) #binary
+
+        self.dropout = nn.Dropout(p=0.5)
+
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+
+        h = self.relu(self.conv1(x))
+        h = self.pool1(h)
+
+        h = self.relu(self.conv2(h))
+        h = self.pool2(h)
+
+        h = self.relu(self.conv3a(h))
+        h = self.relu(self.conv3b(h))
+        h = self.pool3(h)
+
+        h = self.relu(self.conv4a(h))
+        h = self.relu(self.conv4b(h))
+        h = self.pool4(h)
+
+        h = self.relu(self.conv5a(h))
+        h = self.relu(self.conv5b(h))
+        h = self.pool5(h)
+
+        h = h.reshape(-1, 8192)
+        h = self.relu(self.fc6(h))
+        h = self.dropout(h)
+        h = self.relu(self.fc7(h))
+        h = self.dropout(h)
+
+        logits = self.fc8(h)
+        probs = self.sigmoid(logits)
+
+        return probs
     
 
-#sample final look of endto end not sure if iys right
 class EndToEndModel(nn.Module):
     def __init__(self, classifier, cnn, fully_connected, final_score_regressor):
         super(EndToEndModel, self).__init__()

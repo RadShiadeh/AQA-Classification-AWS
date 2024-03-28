@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from models import C3DC, FullyConnected, ScoreRegressor, ResNetClassifier, EndToEndModel
+from models import C3DExtended, FullyConnected, ScoreRegressor, ResNetClassifier, EndToEndModel
 from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
@@ -132,7 +132,7 @@ test_data_loader = DataLoader(video_dataset_test, batch_size)
 
 pre_trained_c3d_dict = torch.load(c3d_pkl_path) #load c3d weights AQA
 
-cnnLayer = C3DC()
+cnnLayer = C3DExtended()
 cnn_layer_dict = cnnLayer.state_dict()
 pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in cnn_layer_dict}
 cnn_layer_dict.update(pre_trained_c3d_dict)
