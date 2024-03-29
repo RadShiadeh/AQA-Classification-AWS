@@ -2,7 +2,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import torchvision.models as models
-from torchvision.models.video import R3D_18_Weights
 
 
 class ClassifierCNN3D(nn.Module):
@@ -149,7 +148,7 @@ class ScoreRegressor(nn.Module):
 class ResNetClassifier(nn.Module):
     def __init__(self, num_classes=2):
         super(ResNetClassifier, self).__init__()
-        r3d_model = models.video.r3d_18(weights=R3D_18_Weights.DEFAULT)
+        r3d_model = models.video.r3d_18(pretrained=True)
         self.features = nn.Sequential(*list(r3d_model.children())[:-1])
         self.avgpool = nn.AdaptiveAvgPool3d(1)
     
