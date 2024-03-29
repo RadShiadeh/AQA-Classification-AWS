@@ -233,7 +233,7 @@ for epoch in range(num_epochs):
         print(f"running losses: {classification_running_loss, scorer_running_loss} [class, scorer]")
 
     if (epoch + 1) % 5 == 0:
-        torch.save(eteModel.state_dict(), 'ETE_model.pth')
+        torch.save(eteModel.state_dict(), 'ETE_model_resNet.pth')
     
     
 

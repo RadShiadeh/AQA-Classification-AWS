@@ -8,7 +8,7 @@
 #SBATCH -o ./log_%j.out # STDOUT out
 #SBATCH -e ./log_%j.err # STDERR out
 #SBATCH --account=COMS030144
-#SBATCH --mem=16gb
+#SBATCH --mem=24gb
 
 echo start time is "$(date)" for c3d_classifier
 echo Slurm job ID is "${SLURM_JOBID}"
