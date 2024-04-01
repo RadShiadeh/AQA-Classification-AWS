@@ -55,8 +55,8 @@ class ClassifierCNN3D(nn.Module):
         x = self.relu(x)
 
         x = x.reshape(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
+        x = self.fc1(x)
+        x = self.fc2(x)
         x = torch.sigmoid(x)
         
         return x
@@ -151,7 +151,7 @@ class ClassifierETE(nn.Module):
         self.fc = nn.Linear(4096, 1)
     
     def forward(self, x):
-        x = torch.relu(self.fc(x))
+        x = self.fc(x)
         return torch.sigmoid(x)
 
 class ResNetClassifier(nn.Module):
@@ -174,7 +174,7 @@ class ResNetFinalClassifier(nn.Module):
         self.fc = nn.Linear(512, 1)
     
     def forward(self, x):
-        x = torch.relu(self.fc(x))
+        x = self.fc(x)
         return torch.sigmoid(x)
 
 class ResNetFinalScorer(nn.Module):

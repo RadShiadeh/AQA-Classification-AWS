@@ -197,11 +197,6 @@ for epoch in range(num_epochs):
         loss += classification_loss
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(eteModel.parameters(), max_norm=1.0)
-        torch.nn.utils.clip_grad_norm_(classifier.parameters(), max_norm=1.0)
-        torch.nn.utils.clip_grad_norm_(fc.parameters(), max_norm=1.0)
-        torch.nn.utils.clip_grad_norm_(cnnLayer.parameters(), max_norm=1.0)
-        torch.nn.utils.clip_grad_norm_(score_reg.parameters(), max_norm=1.0)
         optimizer.step()
 
         classification_running_loss += classification_loss.item()

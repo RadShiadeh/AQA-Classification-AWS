@@ -157,7 +157,7 @@ for epoch in range(num_epochs):
     final_class.train()
     eteModel.train()
 
-    for _, batch_data in enumerate(test_data_loader):
+    for _, batch_data in enumerate(train_data_loader):
         frames = batch_data[0].type(torch.FloatTensor).to(device)
         frames = frames.permute(0, 4, 1, 2, 3)
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)
