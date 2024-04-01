@@ -155,7 +155,7 @@ class ClassifierETE(nn.Module):
         return torch.sigmoid(x)
 
 class ResNetClassifier(nn.Module):
-    def __init__(self, num_classes=2):
+    def __init__(self):
         super(ResNetClassifier, self).__init__()
         r3d_model = models.video.r3d_18(pretrained=True)
         self.features = nn.Sequential(*list(r3d_model.children())[:-1])
@@ -167,6 +167,25 @@ class ResNetClassifier(nn.Module):
         x = x.reshape(x.size(0), -1)
 
         return x
+
+class ResNetFinalClassifier(nn.Module):
+    def __init__(self):
+        super(ResNetFinalClassifier, self).__init__()
+        self.fc = nn.Linear(512, 1)
+    
+    def forward(self, x):
+        x = torch.relu(self.fc(x))
+        return torch.sigmoid(x)
+
+class ResNetFinalScorer(nn.Module):
+    def __init__(self):
+        super(ResNetFinalScorer, self).__init__()
+        self.fc = nn.Linear(512, 1)
+    
+    def forward(self, x):
+        x = self.fc(x)
+        return x
+
     
 
 class EndToEndModel(nn.Module):
@@ -217,6 +236,23 @@ class ETEC3D(nn.Module):
         
         classification_output = self.classifier(fc_out)
         final_score = self.scorer(fc_out)
+
+        return {
+            'classification': classification_output,
+            'final_score': final_score
+        }
+
+class ETEResNet(nn.Module):
+    def __init__(self, resnet, final_classifier, scorer_layer):
+        super(ETEResNet, self).__init__()
+        self.resnet = resnet
+        self.classifier = final_classifier
+        self.scorer_layer = scorer_layer
+    
+    def forward(self, x):
+        resNet = self.resnet(x)
+        classification_output = self.classifier(resNet)
+        final_score = self.scorer_layer(resNet)
 
         return {
             'classification': classification_output,
