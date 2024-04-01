@@ -155,7 +155,7 @@ criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
 optim_params = (list(fc.parameters()) + list(score_reg.parameters()) + list(classifier.parameters()) + list(cnnLayer.parameters()))
-optimizer = optim.AdamW(optim_params, lr=0.001)
+optimizer = optim.AdamW(optim_params, lr=0.0001)
 
 
 summary_writer = SummaryWriter()

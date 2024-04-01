@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from models import C3DExtended, FullyConnected, ScoreRegressor, ClassifierC3D, EndToEndModel
+from models import C3DExtended, FullyConnected, ScoreRegressor, ClassifierETE, ETEC3D
 from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
@@ -138,15 +138,11 @@ pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in cn
 cnn_layer_dict.update(pre_trained_c3d_dict)
 cnnLayer.load_state_dict(cnn_layer_dict)
 
-classifier = ClassifierC3D()
-classifier_dict = classifier.state_dict()
-pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in classifier_dict}
-classifier_dict.update(pre_trained_c3d_dict)
-classifier.load_state_dict(classifier_dict)
+classifier = ClassifierETE()
 
 fc = FullyConnected()
 score_reg = ScoreRegressor()
-eteModel = EndToEndModel(classifier, cnnLayer, fc, score_reg)
+eteModel = ETEC3D(classifier, cnnLayer, fc, score_reg)
 
 fc = fc.to(device)
 score_reg = score_reg.to(device)
@@ -160,7 +156,7 @@ criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
 optim_params = (list(fc.parameters()) + list(score_reg.parameters()) + list(classifier.parameters()) + list(cnnLayer.parameters()))
-optimizer = optim.AdamW(optim_params, lr=0.001)
+optimizer = optim.AdamW(optim_params, lr=0.0001)
 
 
 summary_writer = SummaryWriter()

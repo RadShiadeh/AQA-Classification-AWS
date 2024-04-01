@@ -145,6 +145,15 @@ class ScoreRegressor(nn.Module):
         x = self.fc1(x)
         return x
 
+class ClassifierETE(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.fc = nn.Linear(4096, 1)
+    
+    def forward(self, x):
+        x = torch.relu(self.fc(x))
+        return torch.sigmoid(x)
+
 class ResNetClassifier(nn.Module):
     def __init__(self, num_classes=2):
         super(ResNetClassifier, self).__init__()
@@ -158,69 +167,6 @@ class ResNetClassifier(nn.Module):
         x = x.reshape(x.size(0), -1)
 
         return x
-
-
-class ClassifierC3D(nn.Module):
-    def __init__(self):
-        super(ClassifierC3D, self).__init__()
-
-        self.conv1 = nn.Conv3d(3, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
-
-        self.conv2 = nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.pool2 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
-
-        self.conv3a = nn.Conv3d(128, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.conv3b = nn.Conv3d(256, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.pool3 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
-
-        self.conv4a = nn.Conv3d(256, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.conv4b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.pool4 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
-
-        self.conv5a = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.conv5b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
-        self.pool5 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2), padding=(0, 1, 1))
-
-        self.fc6 = nn.Linear(8192, 4096)
-        self.fc7 = nn.Linear(4096, 4096)
-        self.fc8 = nn.Linear(4096, 2) #binary
-
-        self.dropout = nn.Dropout(p=0.5)
-
-        self.relu = nn.ReLU()
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-
-        h = self.relu(self.conv1(x))
-        h = self.pool1(h)
-
-        h = self.relu(self.conv2(h))
-        h = self.pool2(h)
-
-        h = self.relu(self.conv3a(h))
-        h = self.relu(self.conv3b(h))
-        h = self.pool3(h)
-
-        h = self.relu(self.conv4a(h))
-        h = self.relu(self.conv4b(h))
-        h = self.pool4(h)
-
-        h = self.relu(self.conv5a(h))
-        h = self.relu(self.conv5b(h))
-        h = self.pool5(h)
-
-        h = h.reshape(-1, 8192)
-        h = self.relu(self.fc6(h))
-        h = self.dropout(h)
-        h = self.relu(self.fc7(h))
-        h = self.dropout(h)
-
-        logits = self.fc8(h)
-        probs = self.sigmoid(logits)
-
-        return probs
     
 
 class EndToEndModel(nn.Module):
@@ -244,6 +190,33 @@ class EndToEndModel(nn.Module):
 
         fc_out = self.fully_connected(features)
         final_score = self.final_score_regressor(fc_out)
+
+        return {
+            'classification': classification_output,
+            'final_score': final_score
+        }
+
+class ETEC3D(nn.Module):
+    def __init__(self, classifier, cnn_layer, fully_connected, scorer):
+        super(ETEC3D, self).__init__()
+        self.classifier = classifier
+        self.cnn_layer = cnn_layer
+        self.fully_connected = fully_connected
+        self.scorer = scorer
+    
+    def forward(self, x):
+        features = []
+        for frame in x:
+            feature_out = self.cnn_layer(frame)
+            features.append(feature_out)
+
+        features = torch.stack(features, dim=0)
+        features = features.flatten(start_dim=1, end_dim=2)
+
+        fc_out = self.fully_connected(features)
+        
+        classification_output = self.classifier(fc_out)
+        final_score = self.scorer(fc_out)
 
         return {
             'classification': classification_output,

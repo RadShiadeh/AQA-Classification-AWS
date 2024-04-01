@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 #SBATCH --job-name=ETE_AQA_c3d_classifier
-#SBATCH --partition=gpu
-#SBATCH --nodes 1
+#SBATCH --nodes 4
+#SBATCH --ntasks-per-node 1
+#SBATCH --cpus-per-task=4
 #SBATCH --time=48:00:0
-#SBATCH --gres=gpu:2  # Requesting 2 GPUs
 #SBATCH -o ./log_%j.out # STDOUT out
 #SBATCH -e ./log_%j.err # STDERR out
 #SBATCH --account=COMS030144
-#SBATCH --mem=24gb
+#SBATCH --mem=20gb
 
 echo start time is "$(date)" for resnet3D
 echo Slurm job ID is "${SLURM_JOBID}"
