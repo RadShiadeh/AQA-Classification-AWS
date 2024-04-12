@@ -186,6 +186,74 @@ class ResNetFinalScorer(nn.Module):
         x = self.fc(x)
         return x
 
+class ETEModelFinal(nn.Module):
+    def __init__(self):
+        super(ETEModelFinal, self).__init__()
+        self.pre_conv = nn.Conv3d(3, 3, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pre_pool = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+
+
+        self.conv1 = nn.Conv3d(3, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2))
+
+        self.conv2 = nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool2 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv3a = nn.Conv3d(128, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv3b = nn.Conv3d(256, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool3 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv4a = nn.Conv3d(256, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv4b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool4 = nn.MaxPool3d(kernel_size=(2, 2, 2), stride=(2, 2, 2))
+
+        self.conv5a = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.conv5b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
+        self.pool5 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(2, 2, 2), padding=(0, 0, 0))
+
+        self.relu = nn.ReLU()
+
+        self.fc1 = nn.Linear(8192, 4096)
+        self.fc_class = nn.Linear(4096, 2)
+        self.fc_scorer = nn.Linear(4096, 1)
+    
+    def forward(self, x):
+        features = []
+        for frame in x:
+            feature_out = self.relu(self.pre_conv(frame))
+            c = self.pre_pool(feature_out)
+
+            c = self.relu(self.conv1(c))
+            c = self.pool1(c)
+
+            c = self.relu(self.conv2(c))
+            c = self.pool2(c)
+
+            c = self.relu(self.conv3a(c))
+            c = self.relu(self.conv3b(c))
+            c = self.pool3(c)
+
+            c = self.relu(self.conv4a(c))
+            c = self.relu(self.conv4b(c))
+            c = self.pool4(c)
+
+            c = self.relu(self.conv5a(c))
+            c = self.relu(self.conv5b(c))
+            c = self.pool5(c)
+
+            c = c.reshape(c.size(0), -1)
+            features.append(c)
+
+        features = torch.stack(features, dim=0)
+        features = features.flatten(start_dim=1, end_dim=2)
+
+        features = self.fc1(features)
+        c = self.fc_class(features)
+        s = self.fc_scorer(features)
+
+        return {"classification": c, "final_score": s}
+        
+
     
 
 class EndToEndModel(nn.Module):

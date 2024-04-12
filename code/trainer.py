@@ -113,7 +113,7 @@ batch_size = 16
 eval_freq = 1
 c3d_pkl_path = "../../dissData/c3d.pickle"
 
-train_labels_path = "../labels/train_labels/train.pkl"
+train_labels_path = "../labels/train_labels/train_labels_reduced.pkl"
 train_vids = "../../dissData/video_npy/train"
 video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=16)
 

@@ -21,7 +21,6 @@ class VideoDataset(Dataset):
 
         frames_tensor = torch.from_numpy(np.load(video_path))
 
-        # Ensure consistent number of frames
         if len(frames_tensor) < self.num_frames:
             frames_tensor = torch.cat([frames_tensor, torch.zeros(self.num_frames - len(frames_tensor), *frames_tensor.shape[1:])], dim=0)
         elif len(frames_tensor) > self.num_frames:

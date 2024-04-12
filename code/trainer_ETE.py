@@ -4,15 +4,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from models import ResNetClassifier, ETEResNet, ResNetFinalClassifier, ResNetFinalScorer
+from models import ETEModelFinal
 from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
 
 
-def evaluate_scorer(classifier_, scorer_, ete, data_loader):
-    classifier_.eval()
-    scorer_.eval()
+def evaluate_scorer(ete, data_loader):
     ete.eval()
     predicted_scores = []
     true_scores = []
@@ -32,8 +30,6 @@ def evaluate_scorer(classifier_, scorer_, ete, data_loader):
     predicted_scores = np.array(predicted_scores)
     true_scores = np.array(true_scores)
 
-    classifier_.train()
-    scorer_.train()
     ete.train()
 
     return predicted_scores, true_scores
@@ -42,7 +38,6 @@ def get_accuracy_classification(ete, test_data):
     correct = 0
     total = 0
     ete.eval()
-
     with torch.no_grad():
         for data in test_data:
             frames = data[0].type(torch.FloatTensor).to(device)
@@ -101,7 +96,7 @@ batch_size = 16
 eval_freq = 1
 c3d_pkl_path = "../../dissData/c3d.pickle"
 
-train_labels_path = "../labels/train_labels/train_labels_reduced.pkl"
+train_labels_path = "../labels/train_labels/train.pkl"
 train_vids = "../../dissData/video_npy/train"
 video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=16)
 
@@ -117,15 +112,13 @@ train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=Tru
 validation_data = DataLoader(video_dataset_valid, batch_size)
 test_data_loader = DataLoader(video_dataset_test, batch_size)
 
-resNet = ResNetClassifier()
-final_class = ResNetFinalClassifier()
-score_reg = ResNetFinalScorer()
 
-score_reg = score_reg.to(device)
-resNet = resNet.to(device)
-final_class = final_class.to(device)
-
-eteModel = ETEResNet(resNet, final_class, score_reg)
+eteModel = ETEModelFinal()
+pre_trained_c3d_dict = torch.load(c3d_pkl_path)
+ete_layer_dict = eteModel.state_dict()
+pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in ete_layer_dict}
+ete_layer_dict.update(pre_trained_c3d_dict)
+eteModel.load_state_dict(ete_layer_dict)
 
 eteModel = eteModel.to(device)
 
@@ -134,7 +127,7 @@ criterion_classification = nn.BCELoss()
 criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
-optim_params = (list(resNet.parameters()) + list(score_reg.parameters()) + list(final_class.parameters()))
+optim_params = eteModel.parameters()
 optimizer = optim.AdamW(optim_params, lr=0.0001)
 
 
@@ -147,8 +140,6 @@ for epoch in range(num_epochs):
     data_load_start_time = time.time()
     classification_running_loss = 0.0
     scorer_running_loss = 0.0
-    score_reg.train()
-    final_class.train()
     eteModel.train()
 
     for _, batch_data in enumerate(train_data_loader):
@@ -169,7 +160,6 @@ for epoch in range(num_epochs):
 
         classification_loss = criterion_classification(classification_output, classification_labels.float().view(-1, 1))
         final_score_loss = criterion_scorer(final_score_output, score_labels.float()) + criterion_scorer_penalty(final_score_output, score_labels.float())
-
 
         loss = 0
         loss += final_score_loss
@@ -194,7 +184,7 @@ for epoch in range(num_epochs):
     epoch_time = epoch_end_time - epoch_start_time
 
     if ((epoch + 1) % eval_freq) == 0:
-        pred_score, true_score = evaluate_scorer(final_class, score_reg, eteModel, validation_data)
+        pred_score, true_score = evaluate_scorer(eteModel, validation_data)
         correlation_coeff, _ = spearmanr(pred_score, true_score)
         accuracy_class = get_accuracy_classification(eteModel, validation_data)
     
@@ -207,7 +197,7 @@ for epoch in range(num_epochs):
         print(f"running losses: {classification_running_loss, scorer_running_loss} [class, scorer]")
 
     if (epoch + 1) % 5 == 0:
-        torch.save(eteModel.state_dict(), 'ETE_model_resNet.pth')
+        torch.save(eteModel.state_dict(), 'ETE_model.pth')
     
     
 
