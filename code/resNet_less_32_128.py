@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from models import C3DExtended, FullyConnected, ScoreRegressor, ClassifierCNN3D, EndToEndModel
+from models_32_frame_128 import ResNetClassifier, ETEResNet, ResNetFinalClassifier, ResNetFinalScorer
 from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
@@ -113,40 +113,37 @@ batch_size = 16
 eval_freq = 1
 c3d_pkl_path = "../../dissData/c3d.pickle"
 
-train_labels_path = "../labels/train_labels/train_labels_reduced.pkl"
-train_vids = "../../dissData/video_npy/train"
-video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=16)
+train_labels_path = "../labels/train_labels/train.pkl"
+train_vids = "../../dissData/video_npy_reduced/train_128"
+video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=32)
 
 labels_valid = "../labels/valid_labels/valid.pkl"
-valid_vids = "../../dissData/video_npy/valid"
-video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=16)
+valid_vids = "../../dissData/video_npy_reduced/valid_128"
+video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=32)
 
 labels_test = "../labels/test_labels/test.pkl"
-test_vids = "../../dissData/video_npy/test"
-video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=16)
+test_vids = "../../dissData/video_npy_reduced/test_128"
+video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=32)
 
 train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 validation_data = DataLoader(video_dataset_valid, batch_size)
 test_data_loader = DataLoader(video_dataset_test, batch_size)
 
 
-classifier = ClassifierCNN3D()
+train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
+validation_data = DataLoader(video_dataset_valid, batch_size)
+test_data_loader = DataLoader(video_dataset_test, batch_size)
 
-pre_trained_c3d_dict = torch.load(c3d_pkl_path)
-cnnLayer = C3DExtended()
-cnn_layer_dict = cnnLayer.state_dict()
-pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in cnn_layer_dict}
-cnn_layer_dict.update(pre_trained_c3d_dict)
-cnnLayer.load_state_dict(cnn_layer_dict)
+resNet = ResNetClassifier()
+final_class = ResNetFinalClassifier()
+score_reg = ResNetFinalScorer()
 
-fc = FullyConnected()
-score_reg = ScoreRegressor()
-eteModel = EndToEndModel(classifier, cnnLayer, fc, score_reg)
-
-fc = fc.to(device)
 score_reg = score_reg.to(device)
-cnnLayer = cnnLayer.to(device)
-classifier = classifier.to(device)
+resNet = resNet.to(device)
+final_class = final_class.to(device)
+
+eteModel = ETEResNet(resNet, final_class, score_reg)
+
 eteModel = eteModel.to(device)
 
 
@@ -154,7 +151,7 @@ criterion_classification = nn.BCELoss()
 criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
-optim_params = (list(fc.parameters()) + list(score_reg.parameters()) + list(classifier.parameters()) + list(cnnLayer.parameters()))
+optim_params = (list(resNet.parameters()) + list(score_reg.parameters()) + list(final_class.parameters()))
 optimizer = optim.AdamW(optim_params, lr=0.0001)
 
 
@@ -168,16 +165,12 @@ for epoch in range(num_epochs):
     classification_running_loss = 0.0
     scorer_running_loss = 0.0
     score_reg.train()
-    cnnLayer.train()
-    classifier.train()
-    fc.train()
+    final_class.train()
     eteModel.train()
 
-    for _, batch_data in enumerate(validation_data):
+    for _, batch_data in enumerate(train_data_loader):
         frames = batch_data[0].type(torch.FloatTensor).to(device)
         frames = frames.permute(0, 4, 1, 2, 3)
-        print(frames.shape)
-        import sys; sys.exit()
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)
         score_labels = batch_data[2].type(torch.FloatTensor).to(device)
         score_labels = score_labels.float().view(-1, 1)
@@ -193,6 +186,7 @@ for epoch in range(num_epochs):
 
         classification_loss = criterion_classification(classification_output, classification_labels.float().view(-1, 1))
         final_score_loss = criterion_scorer(final_score_output, score_labels.float()) + criterion_scorer_penalty(final_score_output, score_labels.float())
+
 
         loss = 0
         loss += final_score_loss
@@ -217,9 +211,9 @@ for epoch in range(num_epochs):
     epoch_time = epoch_end_time - epoch_start_time
 
     if ((epoch + 1) % eval_freq) == 0:
-        pred_score, true_score = evaluate_scorer(classifier,cnnLayer, fc, score_reg, eteModel, validation_data)
+        pred_score, true_score = evaluate_scorer(final_class, score_reg, eteModel, validation_data)
         correlation_coeff, _ = spearmanr(pred_score, true_score)
-        accuracy_class = get_accuracy_classification(eteModel, cnnLayer, classifier, score_reg, fc, validation_data)
+        accuracy_class = get_accuracy_classification(eteModel, validation_data)
     
     avg_classification_loss = classification_running_loss / len(train_data_loader)
     avg_scorer_loss = scorer_running_loss / len(train_data_loader)
@@ -230,7 +224,7 @@ for epoch in range(num_epochs):
         print(f"running losses: {classification_running_loss, scorer_running_loss} [class, scorer]")
 
     if (epoch + 1) % 5 == 0:
-        torch.save(eteModel.state_dict(), 'ETE_model.pth')
+        torch.save(eteModel.state_dict(), 'ETE_model_resNet.pth')
     
     
 

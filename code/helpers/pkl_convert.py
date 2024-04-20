@@ -5,7 +5,7 @@ import json
 from tester import *
 import pickle
 
-def convert_video_to_pkl(video_file, output_folder, num_frames=128, resize_shape=(256, 256)):
+def convert_video_to_pkl(video_file, output_folder, num_frames=128, resize_shape=(64, 64)):
     cap = cv2.VideoCapture(video_file)
 
     if not os.path.exists(output_folder):

@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from models import C3DExtended, FullyConnected, ScoreRegressor, ClassifierCNN3D, EndToEndModel
+from models_32_frame_128 import C3DExtended, FullyConnected, ScoreRegressor, ClassifierETE, ETEC3D
 from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
@@ -113,35 +113,36 @@ batch_size = 16
 eval_freq = 1
 c3d_pkl_path = "../../dissData/c3d.pickle"
 
-train_labels_path = "../labels/train_labels/train_labels_reduced.pkl"
-train_vids = "../../dissData/video_npy/train"
-video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=16)
+train_labels_path = "../labels/train_labels/train.pkl"
+train_vids = "../../dissData/video_npy_reduced/train_128"
+video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=32)
 
 labels_valid = "../labels/valid_labels/valid.pkl"
-valid_vids = "../../dissData/video_npy/valid"
-video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=16)
+valid_vids = "../../dissData/video_npy_reduced/valid_128"
+video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=32)
 
 labels_test = "../labels/test_labels/test.pkl"
-test_vids = "../../dissData/video_npy/test"
-video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=16)
+test_vids = "../../dissData/video_npy_reduced/test_128"
+video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=32)
 
 train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
 validation_data = DataLoader(video_dataset_valid, batch_size)
 test_data_loader = DataLoader(video_dataset_test, batch_size)
 
 
-classifier = ClassifierCNN3D()
+pre_trained_c3d_dict = torch.load(c3d_pkl_path) #load c3d weights
 
-pre_trained_c3d_dict = torch.load(c3d_pkl_path)
 cnnLayer = C3DExtended()
 cnn_layer_dict = cnnLayer.state_dict()
 pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in cnn_layer_dict}
 cnn_layer_dict.update(pre_trained_c3d_dict)
 cnnLayer.load_state_dict(cnn_layer_dict)
 
+classifier = ClassifierETE()
+
 fc = FullyConnected()
 score_reg = ScoreRegressor()
-eteModel = EndToEndModel(classifier, cnnLayer, fc, score_reg)
+eteModel = ETEC3D(classifier, cnnLayer, fc, score_reg)
 
 fc = fc.to(device)
 score_reg = score_reg.to(device)
@@ -173,11 +174,9 @@ for epoch in range(num_epochs):
     fc.train()
     eteModel.train()
 
-    for _, batch_data in enumerate(validation_data):
+    for _, batch_data in enumerate(train_data_loader):
         frames = batch_data[0].type(torch.FloatTensor).to(device)
         frames = frames.permute(0, 4, 1, 2, 3)
-        print(frames.shape)
-        import sys; sys.exit()
         classification_labels = batch_data[1].type(torch.FloatTensor).to(device)
         score_labels = batch_data[2].type(torch.FloatTensor).to(device)
         score_labels = score_labels.float().view(-1, 1)
@@ -199,6 +198,11 @@ for epoch in range(num_epochs):
         loss += classification_loss
 
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(eteModel.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(classifier.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(fc.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(cnnLayer.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(score_reg.parameters(), max_norm=1.0)
         optimizer.step()
 
         classification_running_loss += classification_loss.item()
@@ -230,7 +234,7 @@ for epoch in range(num_epochs):
         print(f"running losses: {classification_running_loss, scorer_running_loss} [class, scorer]")
 
     if (epoch + 1) % 5 == 0:
-        torch.save(eteModel.state_dict(), 'ETE_model.pth')
+        torch.save(eteModel.state_dict(), 'ETE_model_C3D_class.pth')
     
     
 
