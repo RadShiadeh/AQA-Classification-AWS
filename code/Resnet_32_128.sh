@@ -10,7 +10,7 @@
 #SBATCH --account=COMS030144
 #SBATCH --mem=10gb
 
-echo start time is "$(date)" for resnet 128 size and 32 frames
+echo start time is "$(date)" for resnet 128 size and 32 frames reduced data to 1000 samples
 echo Slurm job ID is "${SLURM_JOBID}"
 
 module load "languages/anaconda3/2021-3.8.8-cuda-11.1-pytorch"

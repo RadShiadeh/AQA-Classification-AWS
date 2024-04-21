@@ -9,20 +9,23 @@ def convert_json_to_pkl(json_file, pkl_file):
         data = json.load(f)
 
     reduced = {}
-    for id, v in enumerate(data):
-        if v == 1:
+    for id, v in data.items():
+        if v[0] == 1 and count_squat <= 50:
             count_squat += 1
-        else:
+            reduced[id] = v
+        elif v[0] == 0 and count_ohp <= 50:
             count_ohp += 1
+            reduced[id] = v
 
-        reduced[id] = v
-        if count_ohp >= 500 and count_squat >= 500:
+        if len(reduced) >= 100:
             break
-
+    
+    print(len(reduced))
+    
     with open(pkl_file, 'wb') as f:
 
         pickle.dump(reduced, f)
 
-json_file = 'train_labels.json'
-pkl_file = 'labels_reduced.pkl'
+json_file = 'valid_labels.json'
+pkl_file = 'labels_reduced_valid.pkl'
 convert_json_to_pkl(json_file, pkl_file)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #SBATCH --job-name=ETE_AQA_basic
-#SBATCH --nodes 4
+#SBATCH --nodes 1
 #SBATCH --ntasks-per-node 1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=48:00:0

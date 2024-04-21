@@ -8,6 +8,7 @@ from models_32_frame_128 import C3DExtended, FullyConnected, ScoreRegressor, Cla
 from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
+from sklearn.metrics import roc_auc_score
 
 
 def evaluate_scorer(classifier_, cnn_, fully_connected_, scorer_, ete, data_loader):
@@ -51,6 +52,9 @@ def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, t
     scorer.eval()
     fully_connected.eval()
 
+    true_labels = []
+    predicted_probs = []
+
     with torch.no_grad():
         for data in test_data:
             frames = data[0].type(torch.FloatTensor).to(device)
@@ -62,7 +66,17 @@ def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, t
             _, pred = torch.max(outputs['classification'], 1)
             total += classification_labels.size(0)
             correct += (pred == classification_labels).sum().item()
+
+            pred_probs = torch.sigmoid(outputs['classification'])
+
+            true_labels.extend(classification_labels.cpu().numpy())
+            predicted_probs.extend(pred_probs.cpu().numpy())
         
+    true_labels = np.array(true_labels)
+    predicted_probs = np.array(predicted_probs)
+
+    auc_score = roc_auc_score(true_labels, predicted_probs)
+
     accuracy = correct / total * 100
     ete.train()
     cnn.train()
@@ -70,18 +84,19 @@ def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, t
     scorer.train()
     fully_connected.train()
     
-    return accuracy
+    return accuracy, auc_score
 
 
 
 
-def print_metrics(epoch, loss, accuracy, type, epoch_end):
+def print_metrics(epoch, loss, accuracy, type, epoch_end, auc=0):
     print(
         f"epoch: [{epoch}], "
         f"batch loss: {loss:.3f}, "
         f"accuracy: {accuracy:.3f}, "
         f"model type: {type}"
-        f"epoch end time: {epoch_end:.3f}"
+        f"epoch end time: {epoch_end:.3f}, "
+        f"AUC: {auc:.3f}"
     )
 
 
@@ -113,15 +128,15 @@ batch_size = 16
 eval_freq = 1
 c3d_pkl_path = "../../dissData/c3d.pickle"
 
-train_labels_path = "../labels/train_labels/train.pkl"
+train_labels_path = "../labels/train_labels/train_labels_reduced.pkl"
 train_vids = "../../dissData/video_npy_reduced/train_128"
 video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=32)
 
-labels_valid = "../labels/valid_labels/valid.pkl"
+labels_valid = "../labels/valid_labels/labels_reduced_valid.pkl"
 valid_vids = "../../dissData/video_npy_reduced/valid_128"
 video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=32)
 
-labels_test = "../labels/test_labels/test.pkl"
+labels_test = "../labels/test_labels/labels_reduced_test.pkl"
 test_vids = "../../dissData/video_npy_reduced/test_128"
 video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=32)
 
@@ -223,13 +238,13 @@ for epoch in range(num_epochs):
     if ((epoch + 1) % eval_freq) == 0:
         pred_score, true_score = evaluate_scorer(classifier,cnnLayer, fc, score_reg, eteModel, validation_data)
         correlation_coeff, _ = spearmanr(pred_score, true_score)
-        accuracy_class = get_accuracy_classification(eteModel, cnnLayer, classifier, score_reg, fc, validation_data)
+        accuracy_class, auc_class = get_accuracy_classification(eteModel, cnnLayer, classifier, score_reg, fc, validation_data)
     
     avg_classification_loss = classification_running_loss / len(train_data_loader)
     avg_scorer_loss = scorer_running_loss / len(train_data_loader)
 
     if ((epoch + 1) % print_frequency) == 0:
-        print_metrics(epoch=epoch+1, loss=avg_classification_loss, accuracy=accuracy_class, type="classification ", epoch_end=epoch_time)
+        print_metrics(epoch=epoch+1, loss=avg_classification_loss, accuracy=accuracy_class, type="classification ", epoch_end=epoch_time, auc=auc_class)
         print_metrics(epoch=epoch+1, loss=avg_scorer_loss, accuracy=correlation_coeff, type="scorer spearmanr correlation ", epoch_end=epoch_time)
         print(f"running losses: {classification_running_loss, scorer_running_loss} [class, scorer]")
 
