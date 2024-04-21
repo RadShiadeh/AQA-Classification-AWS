@@ -253,5 +253,6 @@ for epoch in range(num_epochs):
         torch.save(eteModel.state_dict(), 'ETE_model_C3D_class.pth')
     
     
+    
 
 summary_writer.close()

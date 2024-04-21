@@ -95,34 +95,47 @@ class C3DExtended(nn.Module):
         self.conv5a = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
         self.conv5b = nn.Conv3d(512, 512, kernel_size=(3, 3, 3), padding=(1, 1, 1))
         self.pool5 = nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2), padding=(0, 0, 0))
+        self.batch_norm1 = nn.BatchNorm2d(32)
+        self.batch_norm2 = nn.BatchNorm2d(16)
+        self.batch_norm3 = nn.BatchNorm2d(8)
+        self.batch_norm4 = nn.BatchNorm2d(4)
 
 
         self.relu = nn.ReLU()
 
     def forward(self, x):
         h = self.relu(self.pre_conv(x))
+        h = self.batch_norm1(x)
         h = self.pre_pool(h)
 
         h = self.relu(self.conv1(h))
+        h = self.batch_norm1(h)
         h = self.pool1(h)
 
         h = self.relu(self.conv2(h))
+        h = self.batch_norm1(h)
         h = self.pool2(h)
 
         h = self.relu(self.conv3a(h))
+        h = self.batch_norm2(h)
         h = self.relu(self.conv3b(h))
+        h = self.batch_norm2(h)
         h = self.pool3(h)
 
         h = self.relu(self.conv4a(h))
+        h = self.batch_norm3(h)
         h = self.relu(self.conv4b(h))
+        h = self.batch_norm3(h)
         h = self.pool4(h)
 
         h = self.relu(self.conv5a(h))
+        h = self.batch_norm4(h)
         h = self.relu(self.conv5b(h))
+        h = self.batch_norm4(h)
         h = self.pool5(h)
 
         h = h.reshape(h.size(0), -1)
-
+        
         return h
 
 

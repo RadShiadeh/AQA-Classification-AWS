@@ -62,12 +62,15 @@ def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, t
             classification_labels = data[1].type(torch.FloatTensor).to(device)
 
             outputs = ete(frames)
+            print(outputs['classification'], "out class")
+            print(classification_labels, "label class")
 
-            _, pred = torch.max(outputs['classification'], 1)
+            _, pred = torch.max(outputs['classification'] > 0.5, 1)
+            print(pred, "max")
             total += classification_labels.size(0)
             correct += (pred == classification_labels).sum().item()
 
-            pred_probs = torch.sigmoid(outputs['classification'])
+            pred_probs = outputs['classification']
 
             true_labels.extend(classification_labels.cpu().numpy())
             predicted_probs.extend(pred_probs.cpu().numpy())
@@ -231,6 +234,7 @@ for epoch in range(num_epochs):
             log_metrics(epoch, final_score_loss, data_load_time, step_time)
 
         step += 1
+        break
     
     epoch_end_time = time.time()
     epoch_time = epoch_end_time - epoch_start_time
