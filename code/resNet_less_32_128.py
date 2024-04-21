@@ -10,10 +10,8 @@ import numpy as np
 from scipy.stats import spearmanr
 
 
-def evaluate_scorer(classifier_, cnn_, fully_connected_, scorer_, ete, data_loader):
+def evaluate_scorer(classifier_, scorer_, ete, data_loader):
     classifier_.eval()
-    cnn_.eval()
-    fully_connected_.eval()
     scorer_.eval()
     ete.eval()
     predicted_scores = []
@@ -35,21 +33,15 @@ def evaluate_scorer(classifier_, cnn_, fully_connected_, scorer_, ete, data_load
     true_scores = np.array(true_scores)
 
     classifier_.train()
-    cnn_.train()
-    fully_connected_.train()
     scorer_.train()
     ete.train()
 
     return predicted_scores, true_scores
 
-def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, test_data):
+def get_accuracy_classification(ete, test_data):
     correct = 0
     total = 0
     ete.eval()
-    cnn.eval()
-    classifier.eval()
-    scorer.eval()
-    fully_connected.eval()
 
     with torch.no_grad():
         for data in test_data:
@@ -65,10 +57,6 @@ def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, t
         
     accuracy = correct / total * 100
     ete.train()
-    cnn.train()
-    classifier.train()
-    scorer.train()
-    fully_connected.train()
     
     return accuracy
 
