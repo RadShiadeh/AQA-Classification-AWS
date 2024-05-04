@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from models_32_frame_128 import C3DExtended, FullyConnected, ScoreRegressor, ClassifierETE, ETEC3D
+from models_32_frame_128 import C3DExtended10Layers, FullyConnected, ScoreRegressor, ClassifierETE, ETEC3D
 from dataloader_aug import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
@@ -150,7 +150,7 @@ test_data_loader = DataLoader(video_dataset_test, batch_size)
 
 pre_trained_c3d_dict = torch.load(c3d_pkl_path) #load c3d weights
 
-cnnLayer = C3DExtended()
+cnnLayer = C3DExtended10Layers()
 cnn_layer_dict = cnnLayer.state_dict()
 pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in cnn_layer_dict}
 cnn_layer_dict.update(pre_trained_c3d_dict)

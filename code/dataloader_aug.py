@@ -39,3 +39,7 @@ class VideoDataset(Dataset):
         with open(labels_file, 'rb') as file:
             labels = pickle.load(file)
         return labels
+    
+    def normalize(self, frames_tensor):
+        frames_tensor = frames_tensor.float() / 255.0 
+        return frames_tensor
