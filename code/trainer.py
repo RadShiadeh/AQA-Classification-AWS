@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from models import C3DExtended, FullyConnected, ScoreRegressor, ClassifierCNN3D, EndToEndModel
-from dataloader_aug import VideoDataset
+from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
 from sklearn.metrics import roc_auc_score

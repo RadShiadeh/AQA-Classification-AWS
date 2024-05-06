@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from models_32_frame_128 import C3DExtended, FullyConnected, ScoreRegressor, ClassifierETE, ETEC3D
-from dataloader_aug import VideoDataset
+from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
 from sklearn.metrics import roc_auc_score
@@ -62,11 +62,8 @@ def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, t
             classification_labels = data[1].type(torch.FloatTensor).to(device)
 
             outputs = ete(frames)
-            print(outputs['classification'], "out class")
-            print(classification_labels, "label class")
 
             _, pred = torch.max(outputs['classification'] > 0.5, 1)
-            print(pred, "max")
             total += classification_labels.size(0)
             correct += (pred == classification_labels).sum().item()
 
@@ -157,7 +154,6 @@ cnn_layer_dict.update(pre_trained_c3d_dict)
 cnnLayer.load_state_dict(cnn_layer_dict)
 
 classifier = ClassifierETE()
-
 fc = FullyConnected()
 score_reg = ScoreRegressor()
 eteModel = ETEC3D(classifier, cnnLayer, fc, score_reg)
@@ -169,7 +165,7 @@ classifier = classifier.to(device)
 eteModel = eteModel.to(device)
 
 
-criterion_classification = nn.BCELoss()
+criterion_classification = nn.BCELoss() 
 criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
@@ -177,7 +173,7 @@ optim_params = (list(fc.parameters()) + list(score_reg.parameters()) + list(clas
 optimizer = optim.AdamW(optim_params, lr=0.0001)
 
 
-summary_writer = SummaryWriter()
+summary_writer = SummaryWriter()    
 
 num_epochs = 50
 for epoch in range(num_epochs):
@@ -216,11 +212,6 @@ for epoch in range(num_epochs):
         loss += classification_loss
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(eteModel.parameters(), max_norm=1.0)
-        torch.nn.utils.clip_grad_norm_(classifier.parameters(), max_norm=1.0)
-        torch.nn.utils.clip_grad_norm_(fc.parameters(), max_norm=1.0)
-        torch.nn.utils.clip_grad_norm_(cnnLayer.parameters(), max_norm=1.0)
-        torch.nn.utils.clip_grad_norm_(score_reg.parameters(), max_norm=1.0)
         optimizer.step()
 
         classification_running_loss += classification_loss.item()

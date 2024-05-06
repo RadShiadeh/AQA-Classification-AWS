@@ -4,12 +4,11 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from models import C3DExtended, FullyConnected, ScoreRegressor, ClassifierETE, ETEC3D
+from revert_models import C3DC, FullyConnected, ScoreRegressor, ClassifierCNN3D, EndToEndModel
 from dataloader_npy import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
 from sklearn.metrics import roc_auc_score
-
 
 
 def evaluate_scorer(classifier_, cnn_, fully_connected_, scorer_, ete, data_loader):
@@ -45,8 +44,6 @@ def evaluate_scorer(classifier_, cnn_, fully_connected_, scorer_, ete, data_load
     return predicted_scores, true_scores
 
 def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, test_data):
-    correct = 0
-    total = 0
     ete.eval()
     cnn.eval()
     classifier.eval()
@@ -64,11 +61,8 @@ def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, t
 
             outputs = ete(frames)
 
-            _, pred = torch.max(outputs['classification'], 1)
-            total += classification_labels.size(0)
-            correct += (pred == classification_labels).sum().item()
+            _, pred_probs = torch.max(outputs['classification'], 1)
 
-            pred_probs = torch.sigmoid(outputs['classification'])
 
             true_labels.extend(classification_labels.cpu().numpy())
             predicted_probs.extend(pred_probs.cpu().numpy())
@@ -77,27 +71,25 @@ def get_accuracy_classification(ete, cnn, classifier, scorer, fully_connected, t
     predicted_probs = np.array(predicted_probs)
 
     auc_score = roc_auc_score(true_labels, predicted_probs)
-
-    accuracy = correct / total * 100
+    
     ete.train()
     cnn.train()
     classifier.train()
     scorer.train()
     fully_connected.train()
     
-    return accuracy, auc_score
+    return auc_score
 
 
 
 
-def print_metrics(epoch, loss, accuracy, type, epoch_end, auc=0):
+def print_metrics(epoch, loss, accuracy, type, epoch_end):
     print(
         f"epoch: [{epoch}], "
         f"batch loss: {loss:.3f}, "
         f"accuracy: {accuracy:.3f}, "
         f"model type: {type}"
-        f"epoch end time: {epoch_end:.3f}, "
-        f"AUC: {auc:.3f}"
+        f"epoch end time: {epoch_end:.3f}"
     )
 
 
@@ -129,7 +121,7 @@ batch_size = 16
 eval_freq = 1
 c3d_pkl_path = "../../dissData/c3d.pickle"
 
-train_labels_path = "../labels/train_labels/train_labels_reduced.pkl"
+train_labels_path = "../labels/train_labels/train.pkl"
 train_vids = "../../dissData/video_npy/train"
 video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=16)
 
@@ -137,8 +129,8 @@ labels_valid = "../labels/valid_labels/valid.pkl"
 valid_vids = "../../dissData/video_npy/valid"
 video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=16)
 
-labels_test = "../labels/test_labels/test.pkl"
-test_vids = "../../dissData/video_npy/test"
+labels_test = "../labels/valid_labels/valid.pkl"
+test_vids = "../../dissData/video_npy/valid"
 video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=16)
 
 train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)
@@ -146,19 +138,18 @@ validation_data = DataLoader(video_dataset_valid, batch_size)
 test_data_loader = DataLoader(video_dataset_test, batch_size)
 
 
-pre_trained_c3d_dict = torch.load(c3d_pkl_path) #load c3d weights
+classifier = ClassifierCNN3D()
 
-cnnLayer = C3DExtended()
+pre_trained_c3d_dict = torch.load(c3d_pkl_path)
+cnnLayer = C3DC()
 cnn_layer_dict = cnnLayer.state_dict()
 pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in cnn_layer_dict}
 cnn_layer_dict.update(pre_trained_c3d_dict)
 cnnLayer.load_state_dict(cnn_layer_dict)
 
-classifier = ClassifierETE()
-
 fc = FullyConnected()
 score_reg = ScoreRegressor()
-eteModel = ETEC3D(classifier, cnnLayer, fc, score_reg)
+eteModel = EndToEndModel(classifier, cnnLayer, fc, score_reg)
 
 fc = fc.to(device)
 score_reg = score_reg.to(device)
@@ -172,7 +163,7 @@ criterion_scorer = nn.MSELoss()
 criterion_scorer_penalty = nn.L1Loss()
 
 optim_params = (list(fc.parameters()) + list(score_reg.parameters()) + list(classifier.parameters()) + list(cnnLayer.parameters()))
-optimizer = optim.AdamW(optim_params, lr=0.0001)
+optimizer = optim.AdamW(optim_params, lr=0.001)
 
 
 summary_writer = SummaryWriter()
@@ -214,6 +205,11 @@ for epoch in range(num_epochs):
         loss += classification_loss
 
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(eteModel.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(classifier.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(fc.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(cnnLayer.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(score_reg.parameters(), max_norm=1.0)
         optimizer.step()
 
         classification_running_loss += classification_loss.item()
@@ -234,19 +230,18 @@ for epoch in range(num_epochs):
     if ((epoch + 1) % eval_freq) == 0:
         pred_score, true_score = evaluate_scorer(classifier,cnnLayer, fc, score_reg, eteModel, validation_data)
         correlation_coeff, _ = spearmanr(pred_score, true_score)
-        accuracy_class, auc = get_accuracy_classification(eteModel, cnnLayer, classifier, score_reg, fc, validation_data)
+        accuracy_class = get_accuracy_classification(eteModel, cnnLayer, classifier, score_reg, fc, validation_data)
     
     avg_classification_loss = classification_running_loss / len(train_data_loader)
     avg_scorer_loss = scorer_running_loss / len(train_data_loader)
 
     if ((epoch + 1) % print_frequency) == 0:
-        print_metrics(epoch=epoch+1, loss=avg_classification_loss, accuracy=accuracy_class, type="classification ", epoch_end=epoch_time, auc=auc)
+        print_metrics(epoch=epoch+1, loss=avg_classification_loss, accuracy=accuracy_class, type="classification ", epoch_end=epoch_time)
         print_metrics(epoch=epoch+1, loss=avg_scorer_loss, accuracy=correlation_coeff, type="scorer spearmanr correlation ", epoch_end=epoch_time)
         print(f"running losses: {classification_running_loss, scorer_running_loss} [class, scorer]")
 
     if (epoch + 1) % 5 == 0:
-        torch.save(eteModel.state_dict(), 'ETE_model_C3D_class.pth')
-    
+        torch.save(eteModel.state_dict(), 'ETE_model.pth')
     
     
 

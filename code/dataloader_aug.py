@@ -20,7 +20,6 @@ class VideoDataset(Dataset):
         video_path = os.path.join(self.root_dir, f"{video_id}.npy")
 
         frames_tensor = torch.from_numpy(np.load(video_path))
-
         frames_tensor = self.normalize(frames_tensor)
 
         if len(frames_tensor) < self.num_frames:

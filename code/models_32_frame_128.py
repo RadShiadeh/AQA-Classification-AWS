@@ -202,19 +202,20 @@ class FullyConnected(nn.Module):
 class ScoreRegressor(nn.Module):
     def __init__(self):
         super(ScoreRegressor, self).__init__()
-        self.fc1 = nn.Linear(4096, 1)
+        self.fc2 = nn.Linear(4096, 1)
     
     def forward(self, x):
-        x = self.fc1(x)
+        x = self.fc2(x)
         return x
 
 class ClassifierETE(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.fc = nn.Linear(4096, 1)
+        self.fc2 = nn.Linear(4096, 1)
+        self.relu = nn.ReLU()
     
     def forward(self, x):
-        x = self.fc(x)
+        x = self.relu(self.fc2(x))
         return torch.sigmoid(x)
 
 class ResNetClassifier(nn.Module):
