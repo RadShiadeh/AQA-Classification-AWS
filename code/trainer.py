@@ -201,10 +201,10 @@ for epoch in range(num_epochs):
 
         output = eteModel(frames)
 
-        classification_output = output['classification']
+        classification_output = output['classification'].squeeze(dim=1)
         final_score_output = output['final_score']
 
-        classification_loss = criterion_classification(classification_output, classification_labels.float().view(-1, 1))
+        classification_loss = criterion_classification(classification_output, classification_labels.float())
         final_score_loss = criterion_scorer(final_score_output, score_labels.float()) + criterion_scorer_penalty(final_score_output, score_labels.float())
 
         loss = 0
