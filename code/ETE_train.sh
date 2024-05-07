@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 #SBATCH --job-name=ETE_AQA
-#SBATCH --nodes 4
-#SBATCH --ntasks-per-node 1
-#SBATCH --cpus-per-task=4
-#SBATCH --time=48:00:0
+#SBATCH --nodes 1
+#SBATCH --gres=gpu:1
+#SBATCH --partition=teach_gpu
+#SBATCH --time=3:00:0
 #SBATCH -o ./log_%j.out # STDOUT out
 #SBATCH -e ./log_%j.err # STDERR out
 #SBATCH --account=COMS030144
-#SBATCH --mem=20gb
+#SBATCH --mem=8gb
 
 echo start time is "$(date)" for ETE Model, c3d backbone
 echo Slurm job ID is "${SLURM_JOBID}"
