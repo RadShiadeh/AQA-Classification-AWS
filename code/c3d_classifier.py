@@ -127,18 +127,18 @@ running_loss_print_freq = 50
 print_frequency = 1
 batch_size = 16
 eval_freq = 1
-c3d_pkl_path = "../../dissData/c3d.pickle"
+c3d_pkl_path = "../../../dissData/c3d.pickle"
 
-train_labels_path = "../labels/train_labels/train_labels_reduced.pkl"
-train_vids = "../../dissData/video_npy/train"
+train_labels_path = "../../labels/train_labels/train_labels_reduced.pkl"
+train_vids = "../../../dissData/video_npy/train"
 video_dataset = VideoDataset(train_vids, train_labels_path, transform=None, num_frames=16)
 
-labels_valid = "../labels/valid_labels/valid.pkl"
-valid_vids = "../../dissData/video_npy/valid"
+labels_valid = "../../labels/valid_labels/valid.pkl"
+valid_vids = "../../../dissData/video_npy/valid"
 video_dataset_valid = VideoDataset(valid_vids, labels_valid, transform=None, num_frames=16)
 
-labels_test = "../labels/test_labels/test.pkl"
-test_vids = "../../dissData/video_npy/test"
+labels_test = "../../labels/test_labels/test.pkl"
+test_vids = "../../../dissData/video_npy/test"
 video_dataset_test = VideoDataset(test_vids, labels_test, transform=None, num_frames=16)
 
 train_data_loader = DataLoader(video_dataset, batch_size=batch_size, shuffle=True)

@@ -234,7 +234,7 @@ class ResNetClassifier(nn.Module):
 class ResNetFinalClassifier(nn.Module):
     def __init__(self):
         super(ResNetFinalClassifier, self).__init__()
-        self.fc = nn.Linear(512, 1)
+        self.fc = nn.Linear(512, 2)
     
     def forward(self, x):
         x = self.fc(x)
