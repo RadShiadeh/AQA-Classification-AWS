@@ -138,8 +138,8 @@ def train_classifier(num_epochs, classifier, class_train_data_loader, optimizer,
             print_metrics(epoch=epoch+1, loss=avg_classification_loss, type="classification ", epoch_end=epoch_time, acc=auc_class)
             print(f"running loss classifier: {classification_running_loss:.3f}")
 
-        if (epoch + 1) % 5 == 0:
-            torch.save(classifier.state_dict(), 'classifier_model_r3d18.pth')
+        #if (epoch + 1) % 1 == 0:
+        torch.save(classifier.state_dict(), 'classifier_model_r3d18.pth')
 
 
 def train_aqa(num_epochs, scorer, train_data_loader, optimizer, eval_freq, test_data_loader, print_frequency, device,
@@ -197,9 +197,9 @@ def train_aqa(num_epochs, scorer, train_data_loader, optimizer, eval_freq, test_
             print_metrics(epoch=epoch+1, loss=avg_scorer_loss, type=scorer_type, epoch_end=epoch_time, acc=correlation_coeff)
             print(f"running loss avg scorer ohp: {avg_scorer_loss:.3f}")
 
-        if (epoch + 1) % 5 == 0:
-            path_name = "scorer_" + model_type + "_model_r3d18.path"
-            torch.save(scorer.state_dict(), path_name)
+        #if (epoch + 1) % 5 == 0:
+        path_name = "scorer_" + model_type + "_model_r3d18.path"
+        torch.save(scorer.state_dict(), path_name)
 
 
 def main():
@@ -282,7 +282,7 @@ def main():
 
 
     summary_writer = SummaryWriter()
-    num_epochs = 50
+    num_epochs = 1
 
     #classifier trainer
     train_classifier(num_epochs, classifier, class_train_data_loader, optimizer_class, eval_freq, 
