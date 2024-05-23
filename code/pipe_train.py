@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from pipe_models import BinaryClassifier, OverHeadPressAQA, BarbellSquatsAQA
+from pipe_models import BinaryClassifier, AQAResNet18, C3DAQA
 from dataloader_pipe import VideoDataset
 import numpy as np
 from scipy.stats import spearmanr
@@ -198,7 +198,7 @@ def train_aqa(num_epochs, scorer, train_data_loader, optimizer, eval_freq, test_
             print(f"running loss avg scorer ohp: {avg_scorer_loss:.3f}")
 
         #if (epoch + 1) % 5 == 0:
-        path_name = "scorer_" + model_type + "_model_r3d18.path"
+        path_name = "scorer_" + model_type + "_.path"
         torch.save(scorer.state_dict(), path_name)
 
 
@@ -210,12 +210,12 @@ def main():
 
     step = 0
     log_frequency = 5
-    running_loss_print_freq = 50
     print_frequency = 1
     batch_size = 16
     eval_freq = 1
 
     all_vids_path = "../../dissData/video_npy_reduced/allVids"
+    c3d_pkl_path = "../../dissData/c3d.pickle"
 
     #ohp aqa labels
     ohp_aqa_train_labels = "../labels/ohp_aqa_labels/ohp_aqa_train.pkl"
@@ -264,12 +264,27 @@ def main():
 
     classifier = BinaryClassifier()
 
-    over_head_press_AQA = OverHeadPressAQA()
-    barbell_squat_AQA = BarbellSquatsAQA()
+    over_head_press_AQA_resNet18 = AQAResNet18()
+    barbell_squat_AQA_resNet18 = AQAResNet18()
+
+    over_head_press_AQA_C3D = C3DAQA()
+    barbell_squat_AQA_C3D = C3DAQA()
+
+    pre_trained_c3d_dict = torch.load(c3d_pkl_path) #load c3d weights
+
+    over_head_press_AQA_C3D_dict = over_head_press_AQA_C3D.state_dict()
+    pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in over_head_press_AQA_C3D_dict}
+    over_head_press_AQA_C3D_dict.update(pre_trained_c3d_dict)
+    over_head_press_AQA_C3D.load_state_dict(over_head_press_AQA_C3D_dict)
+
+    barbell_squat_AQA_C3D_dict = over_head_press_AQA_C3D.state_dict()
+    pre_trained_c3d_dict = {k: v for k, v in pre_trained_c3d_dict.items() if k in barbell_squat_AQA_C3D_dict}
+    barbell_squat_AQA_C3D_dict.update(pre_trained_c3d_dict)
+    over_head_press_AQA_C3D.load_state_dict(barbell_squat_AQA_C3D_dict)
 
     classifier.to(device)
-    over_head_press_AQA.to(device)
-    barbell_squat_AQA.to(device)
+    over_head_press_AQA_resNet18.to(device)
+    barbell_squat_AQA_resNet18.to(device)
 
 
     criterion_classification = nn.BCELoss()
@@ -277,25 +292,34 @@ def main():
     criterion_scorer_penalty = nn.L1Loss()
 
     optimizer_class = optim.AdamW(classifier.parameters(), lr=1e-4)
-    optimizer_ohp = optim.AdamW(over_head_press_AQA.parameters(), lr=1e-4)
-    optimizer_squats = optim.AdamW(barbell_squat_AQA.parameters(), lr=1e-4)
+    optimizer_ohp = optim.AdamW(over_head_press_AQA_resNet18.parameters(), lr=1e-4)
+    optimizer_squats = optim.AdamW(barbell_squat_AQA_resNet18.parameters(), lr=1e-4)
 
 
     summary_writer = SummaryWriter()
-    num_epochs = 1
+    num_epochs = 50
 
     #classifier trainer
     train_classifier(num_epochs, classifier, class_train_data_loader, optimizer_class, eval_freq, 
                      class_test_data_loader, print_frequency, device, log_frequency,
                      criterion_classification, summary_writer, step)
 
-    #ohp aqa trainer
-    train_aqa(num_epochs, over_head_press_AQA, ohp_train_data_loader, optimizer_ohp, eval_freq, ohp_test_data_loader,
-                  print_frequency, device, log_frequency, criterion_scorer, criterion_scorer_penalty, summary_writer, step, "ohp")
+    #ohp aqa trainer resnet18
+    train_aqa(num_epochs, over_head_press_AQA_resNet18, ohp_train_data_loader, optimizer_ohp, eval_freq, ohp_test_data_loader,
+                  print_frequency, device, log_frequency, criterion_scorer, criterion_scorer_penalty, summary_writer, step, "ohpResNet18_3D")
     
-    #squat aqa trainer
-    train_aqa(num_epochs, barbell_squat_AQA, squat_train_data_loader, optimizer_squats, eval_freq, squat_test_data_loader,
-                  print_frequency, device, log_frequency, criterion_scorer, criterion_scorer_penalty, summary_writer, step, "squat")
+    #ohp aqa trainer with C3D
+    train_aqa(num_epochs, over_head_press_AQA_C3D, ohp_train_data_loader, optimizer_ohp, eval_freq, ohp_test_data_loader,
+                  print_frequency, device, log_frequency, criterion_scorer, criterion_scorer_penalty, summary_writer, step, "ohpC3D")
+    
+    #squat aqa trainer ResNet18
+    train_aqa(num_epochs, barbell_squat_AQA_resNet18, squat_train_data_loader, optimizer_squats, eval_freq, squat_test_data_loader,
+                  print_frequency, device, log_frequency, criterion_scorer, criterion_scorer_penalty, summary_writer, step, "squatResNet18")
+    
+    #squat aqa trainer C3D
+    train_aqa(num_epochs, barbell_squat_AQA_C3D, squat_train_data_loader, optimizer_squats, eval_freq, squat_test_data_loader,
+                  print_frequency, device, log_frequency, criterion_scorer, criterion_scorer_penalty, summary_writer, step, "squatC3D")
+
 
     summary_writer.close()
 

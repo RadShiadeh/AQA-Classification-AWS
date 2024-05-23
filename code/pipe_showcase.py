@@ -65,10 +65,10 @@ def main():
     else:
         device = torch.device("cpu")
 
-    input_vid = "path/to/your/video.mp4"
-    classifier_weights = "path/to/classifier_model.pth"
-    ohp_weights = "path/to/ohp_aqa_model.pth"
-    squats_weights = "path/to/squats_aqa_model.pth"
+    input_vid = "../../dissData/allVids/32903_8.mp4"
+    classifier_weights = "classifier_model_r3d18.pth"
+    ohp_weights = "scorer_ohp_model_r3d18.path"
+    squats_weights = "scorer_squat_model_r3d18.path"
 
     showcase = Showcase(input_vid, classifier_weights, ohp_weights, squats_weights, device)
 
